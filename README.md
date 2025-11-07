@@ -1,2 +1,2 @@
-# pathsim-fusion
-pathsim toolbox for nuclear fusion applications
+# pathsim-chem
+pathsim toolbox for chemical engineering
