@@ -1,2 +1,4 @@
-# pathsim-chem
-pathsim toolbox for chemical engineering
+# PathSim-Chem
+
+Chemical Engineering Blocks for PathSim.
+
