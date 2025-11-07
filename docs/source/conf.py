@@ -45,6 +45,7 @@ html_theme = 'furo'
 html_static_path = ['_static', 'logos']
 html_css_files = ['custom.css']
 html_logo = 'logos/pathsim_logo.png'
+html_title = "PathSim-Chem Documentation"
 
 html_theme_options = {
     "light_css_variables": {
@@ -59,7 +60,7 @@ html_theme_options = {
         "color-api-keyword": "#377eb8",
         "color-highlight-on-target": "#fff3cd",
     },
-    "sidebar_hide_name": False,
+    "sidebar_hide_name": True,
     "navigation_with_keys": True,
     "top_of_page_button": "edit",
     "source_repository": "https://github.com/pathsim/pathsim-chem",
