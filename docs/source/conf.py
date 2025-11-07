@@ -42,8 +42,9 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = 'furo'
-html_static_path = ['_static']
+html_static_path = ['_static', 'logos']
 html_css_files = ['custom.css']
+html_logo = 'logos/pathsim_logo.png'
 
 html_theme_options = {
     "light_css_variables": {
