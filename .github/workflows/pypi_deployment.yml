@@ -1,5 +1,4 @@
-name: Publish PathSim to PyPI
-
+name: Publish to PyPI
 on:
   release:
     types: [published] 
@@ -7,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write  
 
 jobs:
   deploy:
