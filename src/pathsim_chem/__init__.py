@@ -11,3 +11,6 @@ except ImportError:
     __version__ = "unknown"
 
 __all__ = ["__version__"]
+
+#for direct block import from main package
+from .tritium import *
