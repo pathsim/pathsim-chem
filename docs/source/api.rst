@@ -1,12 +1,20 @@
 API Reference
 =============
 
-This page provides the API reference for PathSim-Chem modules and functions.
+The following modules form the chemical engineering toolbox for PathSim.
 
-For the core PathSim API, see the `PathSim API Reference <https://pathsim.readthedocs.io/en/latest/api.html>`_.
+.. grid:: 2
+   :gutter: 3
 
-.. autosummary::
-   :toctree: _autosummary
-   :recursive:
+   .. grid-item-card:: Tritium
+      :link: modules/tritium
+      :link-type: doc
 
-   pathsim_chem
+      Tritium science toolbox for nuclear fusion
+
+
+.. toctree::
+   :hidden:
+   :maxdepth: 3
+
+   modules/tritium
