@@ -1,7 +1,6 @@
 #########################################################################################
 ##
 ##                                      Bubbler Block
-##                                (blocks/fusion/bubbler.py)
 ##
 #########################################################################################
 
@@ -9,8 +8,8 @@
 
 import numpy as np
 
-from ..dynsys import DynamicalSystem
-from ...events.schedule import ScheduleList
+from pathsim.blocks.dynsys import DynamicalSystem
+from pathsim.events.schedule import ScheduleList
 
 
 # BLOCK DEFIINITIONS ====================================================================

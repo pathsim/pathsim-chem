@@ -1,7 +1,6 @@
 #########################################################################################
 ##
 ##                           Blocks for residence time modeling
-##                            (blocks/fusion/residencetime.py)
 ##
 #########################################################################################
 
@@ -9,7 +8,7 @@
 
 import numpy as np
 
-from ..dynsys import DynamicalSystem
+from pathsim.blocks.dynsys import DynamicalSystem
 
 
 # BLOCKS ================================================================================

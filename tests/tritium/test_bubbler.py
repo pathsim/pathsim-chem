@@ -18,7 +18,7 @@ from pathsim.events.schedule import ScheduleList
 
 # TESTS ================================================================================
 
-class TestFusionBubbler4(unittest.TestCase):
+class TestTritiumBubbler4(unittest.TestCase):
     """
     Test the implementation of the 'Bubbler4' block class from the fusion toolbox.
     The block inherits from `ODE` and models a 4-vial tritium collection system.
