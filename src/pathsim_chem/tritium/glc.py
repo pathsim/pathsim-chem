@@ -182,8 +182,7 @@ def _solve_bvp_system(dim_params, y_T2_in, BCs, elements):
 def _process_results(solution, params, phys_props, dim_params):
     """Processes the BVP solution to produce dimensional results."""
     if not solution.success:
-        print("BVP solver failed to converge.")
-        return {"error": "BVP solver failed"}
+        raise RuntimeError("BVP solver failed to converge.")
 
     # Unpack parameters
     c_T_inlet, P_0, T = params["c_T_inlet"], params["P_0"], params["T"]
