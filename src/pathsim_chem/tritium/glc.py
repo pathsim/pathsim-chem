@@ -327,7 +327,7 @@ class GLC(pathsim.blocks.Function):
         new_params["c_T_inlet"] = c_T_inlet
         new_params["y_T2_in"] = y_T2_inlet
 
-        res = solve(new_params)
+        [res, _] = solve(new_params)
 
         c_T_outlet = res["c_T_outlet [mol/m^3]"]
         y_T2_outlet = res["y_T2_outlet_gas"]
