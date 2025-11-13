@@ -20,7 +20,20 @@ M_LiPb = 2.875e-25  # Kg/molecule, Lipb molecular mass
 
 
 def _calculate_properties(params):
-    """Calculate temperature-dependent and geometry-dependent properties."""
+    """
+    Calculate temperature-dependent and geometry-dependent physical properties.
+
+    This function computes fluid properties, flow characteristics,
+    dimensionless numbers, and hydrodynamic parameters based on the input
+    geometry and operating conditions.
+
+    Args:
+        params (dict): Dictionary of input parameters including T, D, Flow_l,
+                       Flow_g, and P_0.
+
+    Returns:
+        dict: A dictionary containing the calculated physical properties.
+    """
     T = params["T"]
     D = params["D"]
     Flow_l = params["Flow_l"]
@@ -95,7 +108,19 @@ def _calculate_properties(params):
 
 
 def _calculate_dimensionless_groups(params, phys_props):
-    """Calculate the dimensionless groups for the ODE system."""
+    """
+    Calculate the dimensionless groups for the ODE system.
+
+    Args:
+        params (dict): Dictionary of input parameters including L, T, P_0,
+                       and c_T_inlet.
+        phys_props (dict): Dictionary of physical properties calculated by
+                           _calculate_properties.
+
+    Returns:
+        dict: A dictionary containing the dimensionless groups (Bo_l, phi_l,
+              Bo_g, phi_g, psi, nu).
+    """
     # Unpack parameters
     L, T, P_0, c_T_inlet = params["L"], params["T"], params["P_0"], params["c_T_inlet"]
     
@@ -132,7 +157,22 @@ def _calculate_dimensionless_groups(params, phys_props):
 
 
 def _solve_bvp_system(dim_params, y_T2_in, BCs, elements):
-    """Sets up and solves the Boundary Value Problem for tritium extraction."""
+    """
+    Set up and solve the Boundary Value Problem for tritium extraction.
+
+    This function defines the system of ordinary differential equations (ODEs)
+    and the corresponding boundary conditions, then solves the BVP using
+    `scipy.integrate.solve_bvp`.
+
+    Args:
+        dim_params (dict): Dictionary of dimensionless groups.
+        y_T2_in (float): Inlet mole fraction of T2 in the gas phase.
+        BCs (str): String specifying the boundary conditions (e.g., "C-C").
+        elements (int): Number of elements for the initial mesh.
+
+    Returns:
+        scipy.integrate.OdeSolution: The solution object from `solve_bvp`.
+    """
     Bo_l, phi_l, Bo_g, phi_g, psi, nu = (
         dim_params["Bo_l"],
         dim_params["phi_l"],
@@ -181,7 +221,22 @@ def _solve_bvp_system(dim_params, y_T2_in, BCs, elements):
 
 
 def _process_results(solution, params, phys_props, dim_params):
-    """Processes the BVP solution to produce dimensional results."""
+    """
+    Process the BVP solution to produce dimensional results.
+
+    This function converts the dimensionless solution of the BVP back into
+    dimensional quantities, calculates the extraction efficiency, performs a
+    mass balance check, and aggregates all results.
+
+    Args:
+        solution (scipy.integrate.OdeSolution): The BVP solution object.
+        params (dict): The original input parameters.
+        phys_props (dict): The calculated physical properties.
+        dim_params (dict): The calculated dimensionless groups.
+
+    Returns:
+        list: A list containing the results dictionary and the solution object.
+    """
     if not solution.success:
         raise RuntimeError("BVP solver failed to converge.")
 
@@ -216,12 +271,14 @@ def _process_results(solution, params, phys_props, dim_params):
         "extraction_efficiency [fraction]": efficiency,
         "c_T_inlet [mol/m^3]": c_T_inlet,
         "c_T_outlet [mol/m^3]": c_T_outlet,
-        "liquid_vol_flow [m^3/s]": Q_l,
         "P_T2_inlet_gas [Pa]": P_T2_in,
         "P_T2_outlet_gas [Pa]": P_T2_out,
         "y_T2_outlet_gas": y_T2_outlet_gas,
-        "gas_vol_flow [m^3/s]": Q_g,
+        "total_gas_P_inlet [Pa]": P_0,
         "total_gas_P_outlet [Pa]": P_outlet,
+        "liquid_vol_flow [m^3/s]": Q_l,
+        "gas_vol_flow [m^3/s]": Q_g,
+
     }
 
     # Add all calculated parameters to the results dictionary
@@ -236,10 +293,14 @@ def solve(params):
     Main solver function for the bubble column model.
 
     Args:
-        params (dict): A dictionary of all input parameters for the model.
+        params (dict): A dictionary of all input parameters for the model,
+                       including operational conditions and geometry.
 
     Returns:
-        dict: A dictionary containing the simulation results.
+        list: A list containing:
+              - dict: A dictionary containing the simulation results.
+              - scipy.integrate.OdeSolution: The raw solution object from the
+                BVP solver.
     """
     # Adjust inlet gas concentration to avoid numerical instability at zero
     y_T2_in = max(params["y_T2_in"], 1e-20)
@@ -272,16 +333,14 @@ def solve(params):
 class GLC(pathsim.blocks.Function):
     """
     Gas Liquid Contactor model block. Inherits from Function block.
-    Inputs: c_T_inlet [mol/m^3], P_T2_inlet [Pa]
-    Outputs: n_T_out_liquid [mol/s], n_T_out_gas [mol/s]
 
     More details about the model can be found in: https://doi.org/10.13182/FST95-A30485
 
     Args:
         P_0: Inlet operating pressure [Pa]
         L: Column height [m]
-        u_g0: Superficial gas inlet velocity [m/s]
-        Q_l: Liquid volumetric flow rate [m^3/s]
+        flow_g: Gas mass flow rate [kg/s]
+        flow_l: Liquid mass flow rate [kg/s]
         D: Column diameter [m]
         T: Temperature [K]
         g: Gravitational acceleration [m/s^2], default is 9.81
