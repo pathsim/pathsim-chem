@@ -205,9 +205,15 @@ def _process_results(solution, params, phys_props, dim_params):
     n_T_out_liquid = c_T_outlet * Q_l
     n_T2_in_gas = P_T2_in * Q_g / (R * T)
     n_T_in_gas = n_T2_in_gas * 2
-    # Q_g_out = (P_0 * Q_g) / P_outlet
-    # n_T2_out_gas = (P_T2_out * Q_g_out / (R * T))
-    n_T_out_gas = efficiency * n_T_in_liquid
+    # n_T_out_gas = efficiency * n_T_in_liquid
+    Q_g_out = (P_0 * Q_g) / P_outlet
+    n_T2_out_gas = P_T2_out * Q_g_out / (R * T)
+    n_T_out_gas = n_T2_out_gas * 2
+
+    # Adjust for any mass balance error
+    mass_balance_error = (n_T_in_liquid + n_T_in_gas) - (n_T_out_liquid + n_T_out_gas)
+    n_T_out_gas += mass_balance_error * efficiency
+    n_T_out_liquid += mass_balance_error * (1 - efficiency)
 
     results = {
         "Total tritium in [mol/s]": n_T_in_liquid + n_T_in_gas,
