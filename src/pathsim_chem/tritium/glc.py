@@ -333,8 +333,6 @@ class GLC(pathsim.blocks.Function):
         y_T2_outlet = res["y_T2_outlet_gas"]
         P_total_outlet = res["total_gas_P_outlet [Pa]"]
 
-        n_T_out_liquid = res["tritium_out_liquid [mol/s]"]
-        n_T_out_gas = res["tritium_out_gas [mol/s]"]
         eff = res["extraction_efficiency [%]"]
 
         return c_T_outlet, y_T2_outlet, P_total_outlet, eff
