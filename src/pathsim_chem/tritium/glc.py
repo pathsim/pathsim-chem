@@ -123,7 +123,7 @@ def _calculate_dimensionless_groups(params, phys_props):
     """
     # Unpack parameters
     L, T, P_0, c_T_inlet = params["L"], params["T"], params["P_0"], params["c_T_inlet"]
-    
+
     # Unpack physical properties
     rho_l, K_s, u_l, u_g0, epsilon_g, epsilon_l, E_l, E_g, a, h_l = (
         phys_props["rho_l"],
@@ -134,8 +134,8 @@ def _calculate_dimensionless_groups(params, phys_props):
         phys_props["epsilon_l"],
         phys_props["E_l"],
         phys_props["E_g"],
-        phys_props["a"], 
-        phys_props["h_l"]
+        phys_props["a"],
+        phys_props["h_l"],
     )
 
     # Calculate dimensionless groups
@@ -257,14 +257,13 @@ def _process_results(solution, params, phys_props, dim_params):
     P_T2_in = y_T2_in * P_0
 
     # Mass balance check
-    n_T_in_liquid = c_T_inlet * Q_l
-    n_T_out_liquid = c_T_outlet * Q_l
-    n_T2_in_gas = P_T2_in * Q_g / (R * T)
-    n_T_in_gas = n_T2_in_gas * 2
-    # n_T_out_gas = efficiency * n_T_in_liquid
-    Q_g_out = (P_0 * Q_g) / P_outlet
-    n_T2_out_gas = P_T2_out * Q_g_out / (R * T)
-    n_T_out_gas = n_T2_out_gas * 2
+    n_T_in_liquid = c_T_inlet * Q_l  # mol/s
+    n_T_out_liquid = c_T_outlet * Q_l  # mol/s
+    n_T2_in_gas = P_T2_in * Q_g / (R * T)  # mol/s
+    n_T_in_gas = n_T2_in_gas * 2  # mol/s
+    Q_g_out = (P_0 * Q_g) / P_outlet  # m3/s
+    n_T2_out_gas = P_T2_out * Q_g_out / (R * T)  # mol/s
+    n_T_out_gas = n_T2_out_gas * 2  # mol/s
 
     # Adjust for any mass balance error
     mass_balance_error = (n_T_in_liquid + n_T_in_gas) - (n_T_out_liquid + n_T_out_gas)
@@ -286,7 +285,6 @@ def _process_results(solution, params, phys_props, dim_params):
         "total_gas_P_outlet [Pa]": P_outlet,
         "liquid_vol_flow [m^3/s]": Q_l,
         "gas_vol_flow [m^3/s]": Q_g,
-
     }
 
     # Add all calculated parameters to the results dictionary
