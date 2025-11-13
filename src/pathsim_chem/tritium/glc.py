@@ -98,19 +98,20 @@ def _calculate_dimensionless_groups(params, phys_props):
     """Calculate the dimensionless groups for the ODE system."""
     # Unpack parameters
     L, T, P_0, c_T_inlet = params["L"], params["T"], params["P_0"], params["c_T_inlet"]
-    rho_l, K_s, u_l, u_g0 = (
+    
+    # Unpack physical properties
+    rho_l, K_s, u_l, u_g0, epsilon_g, epsilon_l, E_l, E_g, a, h_l = (
         phys_props["rho_l"],
         phys_props["K_s"],
         phys_props["u_l"],
         phys_props["u_g0"],
-    )
-    epsilon_g, epsilon_l, E_l, E_g = (
         phys_props["epsilon_g"],
         phys_props["epsilon_l"],
         phys_props["E_l"],
         phys_props["E_g"],
+        phys_props["a"], 
+        phys_props["h_l"]
     )
-    a, h_l = phys_props["a"], phys_props["h_l"]
 
     # Calculate dimensionless groups
     psi = (rho_l * g * epsilon_l * L) / P_0  # Hydrostatic pressure ratio
