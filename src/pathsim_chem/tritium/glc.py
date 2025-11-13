@@ -201,19 +201,19 @@ def _process_results(solution, params, phys_props, dim_params):
     P_T2_in = y_T2_in * P_0
 
     # Mass balance check
-    n_T_in_liquid = c_T_inlet * Q_l * N_A
-    n_T_out_liquid = c_T_outlet * Q_l * N_A
-    n_T2_in_gas = (P_T2_in * Q_g / (R * T)) * N_A
+    n_T_in_liquid = c_T_inlet * Q_l
+    n_T_out_liquid = c_T_outlet * Q_l
+    n_T2_in_gas = P_T2_in * Q_g / (R * T)
     n_T_in_gas = n_T2_in_gas * 2
     # Q_g_out = (P_0 * Q_g) / P_outlet
-    # n_T2_out_gas = (P_T2_out * Q_g_out / (R * T)) * N_A
+    # n_T2_out_gas = (P_T2_out * Q_g_out / (R * T))
     n_T_out_gas = efficiency * n_T_in_liquid
 
     results = {
-        "Total tritium in [T/s]": n_T_in_liquid + n_T_in_gas,
-        "Total tritium out [T/s]": n_T_out_liquid + n_T_out_gas,
-        "tritium_out_liquid [T/s]": n_T_out_liquid,
-        "tritium_out_gas [T/s]": n_T_out_gas,
+        "Total tritium in [mol/s]": n_T_in_liquid + n_T_in_gas,
+        "Total tritium out [mol/s]": n_T_out_liquid + n_T_out_gas,
+        "tritium_out_liquid [mol/s]": n_T_out_liquid,
+        "tritium_out_gas [mol/s]": n_T_out_gas,
         "extraction_efficiency [fraction]": efficiency,
         "c_T_inlet [mol/m^3]": c_T_inlet,
         "c_T_outlet [mol/m^3]": c_T_outlet,
