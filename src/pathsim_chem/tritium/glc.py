@@ -293,8 +293,9 @@ class GLC(pathsim.blocks.Function):
     }
     _port_map_out = {
         "c_T_outlet": 0,
-        "P_T2_out_gas": 1,
-        "efficiency": 2,
+        "y_T2_out": 1,
+        "P_out_gas": 2,
+        "efficiency": 3,
     }
 
     def __init__(
