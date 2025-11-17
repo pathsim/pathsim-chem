@@ -38,7 +38,7 @@ def _calculate_properties(params):
     D = params["D"]
     Flow_l = params["Flow_l"]
     Flow_g = params["Flow_g"]
-    P_0 = params["P_0"]
+    P_0 = params["P_in"]
 
     # --- Fluid Properties (Temperature Dependent) ---
     # TODO add references
