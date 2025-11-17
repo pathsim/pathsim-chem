@@ -353,14 +353,14 @@ class GLC(pathsim.blocks.Function):
     """
 
     _port_map_in = {
-        "c_T_inlet": 0,
+        "c_T_in": 0,
         "y_T2_in": 1,
     }
     _port_map_out = {
-        "c_T_outlet": 0,
+        "c_T_out": 0,
         "y_T2_out": 1,
         "eff": 2,
-        "P_out_gas": 3,
+        "P_out": 3,
         "Q_l": 4,
         "Q_g_out": 5,
     }
