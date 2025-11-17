@@ -38,7 +38,7 @@ def _calculate_properties(params):
     D = params["D"]
     Flow_l = params["Flow_l"]
     Flow_g = params["Flow_g"]
-    P_0 = params["P_in"]
+    P_in = params["P_in"]
 
     # --- Fluid Properties (Temperature Dependent) ---
     # TODO add references
@@ -53,7 +53,7 @@ def _calculate_properties(params):
     # --- Flow Properties ---
     A = np.pi * (D / 2) ** 2  # m^2, Cross-sectional area
     Q_l = Flow_l / rho_l  # m^3/s, Volumetric liquid flow rate
-    Q_g = (Flow_g * R * T) / P_0  # m^3/s, Volumetric gas flow rate at inlet
+    Q_g = (Flow_g * R * T) / P_in  # m^3/s, Volumetric gas flow rate at inlet
     u_l = Q_l / A  # m/s, Superficial liquid velocity
     u_g0 = Q_g / A  # m/s, Superficial gas velocity at inlet
 
@@ -112,7 +112,7 @@ def _calculate_dimensionless_groups(params, phys_props):
     Calculate the dimensionless groups for the ODE system.
 
     Args:
-        params (dict): Dictionary of input parameters including L, T, P_0,
+        params (dict): Dictionary of input parameters including L, T, P_in,
                        and c_T_inlet.
         phys_props (dict): Dictionary of physical properties calculated by
                            _calculate_properties.
@@ -122,7 +122,12 @@ def _calculate_dimensionless_groups(params, phys_props):
               Bo_g, phi_g, psi, nu).
     """
     # Unpack parameters
-    L, T, P_0, c_T_inlet = params["L"], params["T"], params["P_0"], params["c_T_inlet"]
+    L, T, P_in, c_T_inlet = (
+        params["L"],
+        params["T"],
+        params["P_in"],
+        params["c_T_inlet"],
+    )
 
     # Unpack physical properties
     rho_l, K_s, u_l, u_g0, epsilon_g, epsilon_l, E_l, E_g, a, h_l = (
@@ -139,12 +144,12 @@ def _calculate_dimensionless_groups(params, phys_props):
     )
 
     # Calculate dimensionless groups
-    psi = (rho_l * g * epsilon_l * L) / P_0  # Hydrostatic pressure ratio
-    nu = ((c_T_inlet / K_s) ** 2) / P_0  # Equilibrium ratio
+    psi = (rho_l * g * epsilon_l * L) / P_in  # Hydrostatic pressure ratio
+    nu = ((c_T_inlet / K_s) ** 2) / P_in  # Equilibrium ratio
     Bo_l = u_l * L / (epsilon_l * E_l)  # Bodenstein number, liquid
-    phi_l = a * h_l * L / u_l  # Transfer units, liquid (Eq. 8.11)
+    phi_l = a * h_l * L / u_l  # Transfer units, liquid
     Bo_g = u_g0 * L / (epsilon_g * E_g)  # Bodenstein number, gas
-    phi_g = 0.5 * (R * T * c_T_inlet / P_0) * (a * h_l * L / u_g0)
+    phi_g = 0.5 * (R * T * c_T_inlet / P_in) * (a * h_l * L / u_g0)
 
     return {
         "Bo_l": Bo_l,
@@ -241,7 +246,7 @@ def _process_results(solution, params, phys_props, dim_params):
         raise RuntimeError("BVP solver failed to converge.")
 
     # Unpack parameters
-    c_T_inlet, P_0, T = params["c_T_inlet"], params["P_0"], params["T"]
+    c_T_inlet, P_in, T = params["c_T_inlet"], params["P_in"], params["T"]
     y_T2_in = params["y_T2_in"]
 
     # Dimensionless results
@@ -252,16 +257,16 @@ def _process_results(solution, params, phys_props, dim_params):
 
     # Dimensional results
     c_T_outlet = x_T_outlet_dimless * c_T_inlet
-    P_outlet = P_0 * (1 - dim_params["psi"])
-    P_T2_out = y_T2_outlet_gas * P_outlet
-    P_T2_in = y_T2_in * P_0
+    P_out = P_in * (1 - dim_params["psi"])
+    P_T2_out = y_T2_outlet_gas * P_out
+    P_T2_in = y_T2_in * P_in
 
     # Mass balance check
     n_T_in_liquid = c_T_inlet * Q_l  # mol/s
     n_T_out_liquid = c_T_outlet * Q_l  # mol/s
     n_T2_in_gas = P_T2_in * Q_g / (R * T)  # mol/s
     n_T_in_gas = n_T2_in_gas * 2  # mol/s
-    Q_g_out = (P_0 * Q_g) / P_outlet  # m3/s
+    Q_g_out = (P_in * Q_g) / P_out  # m3/s
     n_T2_out_gas = P_T2_out * Q_g_out / (R * T)  # mol/s
     n_T_out_gas = n_T2_out_gas * 2  # mol/s
 
@@ -281,8 +286,8 @@ def _process_results(solution, params, phys_props, dim_params):
         "P_T2_inlet_gas [Pa]": P_T2_in,
         "P_T2_outlet_gas [Pa]": P_T2_out,
         "y_T2_outlet_gas": y_T2_outlet_gas,
-        "total_gas_P_inlet [Pa]": P_0,
-        "total_gas_P_outlet [Pa]": P_outlet,
+        "total_gas_P_inlet [Pa]": P_in,
+        "total_gas_P_outlet [Pa]": P_out,
         "liquid_vol_flow [m^3/s]": Q_l,
         "gas_vol_flow_outlet [m^3/s]": Q_g,
     }
@@ -315,13 +320,13 @@ def solve(params):
     phys_props = _calculate_properties(params)
 
     # Pre-solver check for non-physical outlet pressure
-    P_outlet = params["P_0"] - (
+    P_out = params["P_in"] - (
         phys_props["rho_l"] * (1 - phys_props["epsilon_g"]) * g * params["L"]
     )
-    if P_outlet <= 0:
+    if P_out <= 0:
         raise ValueError(
-            f"Calculated gas outlet pressure is non-positive ({P_outlet:.2e} Pa). "
-            "Check input parameters P_0, L, etc."
+            f"Calculated gas outlet pressure is non-positive ({P_out:.2e} Pa). "
+            "Check input parameters P_in, L, etc."
         )
 
     # 2. Calculate dimensionless groups for the ODE system
