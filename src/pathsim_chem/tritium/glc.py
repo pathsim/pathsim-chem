@@ -284,7 +284,7 @@ def _process_results(solution, params, phys_props, dim_params):
         "total_gas_P_inlet [Pa]": P_0,
         "total_gas_P_outlet [Pa]": P_outlet,
         "liquid_vol_flow [m^3/s]": Q_l,
-        "gas_vol_flow [m^3/s]": Q_g,
+        "gas_vol_flow_outlet [m^3/s]": Q_g,
     }
 
     # Add all calculated parameters to the results dictionary
@@ -359,9 +359,10 @@ class GLC(pathsim.blocks.Function):
     _port_map_out = {
         "c_T_outlet": 0,
         "y_T2_out": 1,
-        "P_out_gas": 2,
-        "efficiency": 3,
-        "n_T_out_gas": 4,
+        "eff": 2,
+        "P_out_gas": 3,
+        "Q_l": 4,
+        "Q_g_out": 5,
     }
 
     def __init__(
@@ -397,9 +398,9 @@ class GLC(pathsim.blocks.Function):
 
         c_T_outlet = res["c_T_outlet [mol/m^3]"]
         y_T2_outlet = res["y_T2_outlet_gas"]
-        P_total_outlet = res["total_gas_P_outlet [Pa]"]
-        n_T_out_gas = res["tritium_out_gas [mol/s]"]
-
         eff = res["extraction_efficiency [fraction]"]
+        P_total_outlet = res["total_gas_P_outlet [Pa]"]
+        Q_l = res["liquid_vol_flow [m^3/s]"]
+        Q_g_out = res["gas_vol_flow_outlet [m^3/s]"]
 
-        return c_T_outlet, y_T2_outlet, P_total_outlet, eff, n_T_out_gas
+        return c_T_outlet, y_T2_outlet, eff, P_total_outlet, Q_l, Q_g_out
