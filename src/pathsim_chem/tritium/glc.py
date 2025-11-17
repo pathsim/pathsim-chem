@@ -343,7 +343,7 @@ class GLC(pathsim.blocks.Function):
     More details about the model can be found in: https://doi.org/10.13182/FST95-A30485
 
     Args:
-        P_0: Inlet operating pressure [Pa]
+        P_in: Inlet operating pressure [Pa]
         L: Column height [m]
         flow_g: Gas mass flow rate [kg/s]
         flow_l: Liquid mass flow rate [kg/s]
@@ -367,7 +367,7 @@ class GLC(pathsim.blocks.Function):
 
     def __init__(
         self,
-        P_0,
+        P_in,
         L,
         flow_g,
         flow_l,
@@ -377,7 +377,7 @@ class GLC(pathsim.blocks.Function):
         initial_nb_of_elements=20,
     ):
         self.params = {
-            "P_0": P_0,
+            "P_in": P_in,
             "L": L,
             "Flow_l": flow_l,
             "Flow_g": flow_g,
