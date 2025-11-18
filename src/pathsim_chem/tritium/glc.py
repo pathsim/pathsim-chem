@@ -367,6 +367,8 @@ class GLC(pathsim.blocks.Function):
         "P_out": 3,
         "Q_l": 4,
         "Q_g_out": 5,
+        "n_T_out_liquid": 6,
+        "n_T_out_gas": 7,
     }
 
     def __init__(
@@ -406,5 +408,16 @@ class GLC(pathsim.blocks.Function):
         P_total_outlet = res["total_gas_P_outlet [Pa]"]
         Q_l = res["liquid_vol_flow [m^3/s]"]
         Q_g_out = res["gas_vol_flow_outlet [m^3/s]"]
+        n_T_out_liquid = res["tritium_out_liquid [mol/s]"]
+        n_T_out_gas = res["tritium_out_gas [mol/s]"]
 
-        return c_T_outlet, y_T2_outlet, eff, P_total_outlet, Q_l, Q_g_out
+        return (
+            c_T_outlet,
+            y_T2_outlet,
+            eff,
+            P_total_outlet,
+            Q_l,
+            Q_g_out,
+            n_T_out_liquid,
+            n_T_out_gas,
+        )
