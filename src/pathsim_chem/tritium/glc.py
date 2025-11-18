@@ -358,8 +358,11 @@ class GLC(pathsim.blocks.Function):
 
     _port_map_in = {
         "c_T_in": 0,
-        "y_T2_in": 1,
+        "flow_l":1,
+        "y_T2_in": 2,
+        "flow_g":3,
     }
+
     _port_map_out = {
         "c_T_out": 0,
         "y_T2_out": 1,
@@ -375,30 +378,29 @@ class GLC(pathsim.blocks.Function):
         self,
         P_in,
         L,
-        flow_g,
-        flow_l,
         D,
         T,
         g=const.g,
         initial_nb_of_elements=20,
+        BCs="C-C",
     ):
         self.params = {
             "P_in": P_in,
             "L": L,
-            "Flow_l": flow_l,
-            "Flow_g": flow_g,
             "g": g,
             "D": D,
             "T": T,
             "elements": initial_nb_of_elements,
-            "BCs": "C-C",  # hard coded for now
+            "BCs": BCs,
         }
         super().__init__(func=self.func)
 
-    def func(self, c_T_inlet, y_T2_inlet):
+    def func(self, c_T_inlet, y_T2_inlet, flow_g, flow_l):
         new_params = self.params.copy()
         new_params["c_T_inlet"] = c_T_inlet
         new_params["y_T2_in"] = y_T2_inlet
+        new_params["flow_g"] = flow_g
+        new_params["flow_l"] = flow_l
 
         res, _ = solve(new_params)
 
