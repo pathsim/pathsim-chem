@@ -328,6 +328,8 @@ def solve(params):
             "Check input parameters P_in, L, etc."
         )
 
+    print(params)
+
     # 2. Calculate dimensionless groups for the ODE system
     dim_params = _calculate_dimensionless_groups(params, phys_props)
 
