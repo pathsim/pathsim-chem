@@ -36,8 +36,8 @@ def _calculate_properties(params):
     """
     T = params["T"]
     D = params["D"]
-    Flow_l = params["Flow_l"]
-    Flow_g = params["Flow_g"]
+    flow_l = params["flow_l"]
+    flow_g = params["flow_g"]
     P_in = params["P_in"]
 
     # --- Fluid Properties (Temperature Dependent) ---
@@ -52,8 +52,8 @@ def _calculate_properties(params):
 
     # --- Flow Properties ---
     A = np.pi * (D / 2) ** 2  # m^2, Cross-sectional area
-    Q_l = Flow_l / rho_l  # m^3/s, Volumetric liquid flow rate
-    Q_g = (Flow_g * R * T) / P_in  # m^3/s, Volumetric gas flow rate at inlet
+    Q_l = flow_l / rho_l  # m^3/s, Volumetric liquid flow rate
+    Q_g = (flow_g * R * T) / P_in  # m^3/s, Volumetric gas flow rate at inlet
     u_l = Q_l / A  # m/s, Superficial liquid velocity
     u_g0 = Q_g / A  # m/s, Superficial gas velocity at inlet
 
@@ -349,11 +349,11 @@ class GLC(pathsim.blocks.Function):
     Args:
         P_in: Inlet operating pressure [Pa]
         L: Column height [m]
-        flow_g: Gas mass flow rate [kg/s]
-        flow_l: Liquid mass flow rate [kg/s]
         D: Column diameter [m]
         T: Temperature [K]
         g: Gravitational acceleration [m/s^2], default is 9.81
+        initial_nb_of_elements: Initial number of elements for BVP solver
+        BCs: Boundary conditions type, "C-C" (Closed-Closed) or "O-C" (Open-Closed), default is "C-C"
     """
 
     _port_map_in = {
