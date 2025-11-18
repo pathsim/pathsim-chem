@@ -122,11 +122,11 @@ def _calculate_dimensionless_groups(params, phys_props):
               Bo_g, phi_g, psi, nu).
     """
     # Unpack parameters
-    L, T, P_in, c_T_inlet = (
+    L, T, P_in, c_T_in = (
         params["L"],
         params["T"],
         params["P_in"],
-        params["c_T_inlet"],
+        params["c_T_in"],
     )
 
     # Unpack physical properties
@@ -145,11 +145,11 @@ def _calculate_dimensionless_groups(params, phys_props):
 
     # Calculate dimensionless groups
     psi = (rho_l * g * epsilon_l * L) / P_in  # Hydrostatic pressure ratio
-    nu = ((c_T_inlet / K_s) ** 2) / P_in  # Equilibrium ratio
+    nu = ((c_T_in / K_s) ** 2) / P_in  # Equilibrium ratio
     Bo_l = u_l * L / (epsilon_l * E_l)  # Bodenstein number, liquid
     phi_l = a * h_l * L / u_l  # Transfer units, liquid
     Bo_g = u_g0 * L / (epsilon_g * E_g)  # Bodenstein number, gas
-    phi_g = 0.5 * (R * T * c_T_inlet / P_in) * (a * h_l * L / u_g0)
+    phi_g = 0.5 * (R * T * c_T_in / P_in) * (a * h_l * L / u_g0)
 
     return {
         "Bo_l": Bo_l,
@@ -246,7 +246,7 @@ def _process_results(solution, params, phys_props, dim_params):
         raise RuntimeError("BVP solver failed to converge.")
 
     # Unpack parameters
-    c_T_inlet, P_in, T = params["c_T_inlet"], params["P_in"], params["T"]
+    c_T_in, P_in, T = params["c_T_in"], params["P_in"], params["T"]
     y_T2_in = params["y_T2_in"]
 
     # Dimensionless results
@@ -256,14 +256,14 @@ def _process_results(solution, params, phys_props, dim_params):
     efficiency = 1 - x_T_outlet_dimless
 
     # Dimensional results
-    c_T_outlet = x_T_outlet_dimless * c_T_inlet
+    c_T_out = x_T_outlet_dimless * c_T_in
     P_out = P_in * (1 - dim_params["psi"])
     P_T2_out = y_T2_out * P_out
     P_T2_in = y_T2_in * P_in
 
     # Mass balance check
-    n_T_in_liquid = c_T_inlet * Q_l  # mol/s
-    n_T_out_liquid = c_T_outlet * Q_l  # mol/s
+    n_T_in_liquid = c_T_in * Q_l  # mol/s
+    n_T_out_liquid = c_T_out * Q_l  # mol/s
     n_T2_in_gas = P_T2_in * Q_g / (R * T)  # mol/s
     n_T_in_gas = n_T2_in_gas * 2  # mol/s
     Q_g_out = Q_g * (P_in / P_out)  # m3/s
@@ -281,7 +281,7 @@ def _process_results(solution, params, phys_props, dim_params):
         "tritium_out_liquid [mol/s]": n_T_out_liquid,
         "tritium_out_gas [mol/s]": n_T_out_gas,
         "extraction_efficiency [fraction]": efficiency,
-        "c_T_outlet [mol/m^3]": c_T_outlet,
+        "c_T_outlet [mol/m^3]": c_T_out,
         "P_T2_inlet_gas [Pa]": P_T2_in,
         "P_T2_outlet_gas [Pa]": P_T2_out,
         "y_T2_outlet_gas": y_T2_out,
@@ -405,8 +405,8 @@ class GLC(pathsim.blocks.Function):
 
         res, _ = solve(new_params)
 
-        c_T_outlet = res["c_T_outlet [mol/m^3]"]
-        y_T2_outlet = res["y_T2_outlet_gas"]
+        c_T_out = res["c_T_outlet [mol/m^3]"]
+        y_T2_out = res["y_T2_outlet_gas"]
         eff = res["extraction_efficiency [fraction]"]
         P_total_outlet = res["total_gas_P_outlet [Pa]"]
         Q_l = res["liquid_vol_flow [m^3/s]"]
@@ -415,8 +415,8 @@ class GLC(pathsim.blocks.Function):
         n_T_out_gas = res["tritium_out_gas [mol/s]"]
 
         return (
-            c_T_outlet,
-            y_T2_outlet,
+            c_T_out,
+            y_T2_out,
             eff,
             P_total_outlet,
             Q_l,
