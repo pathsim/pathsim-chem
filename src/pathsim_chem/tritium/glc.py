@@ -380,9 +380,9 @@ class GLC(pathsim.blocks.Function):
         L,
         D,
         T,
+        BCs,
         g=const.g,
         initial_nb_of_elements=20,
-        BCs="C-C",
     ):
         self.params = {
             "P_in": P_in,
@@ -395,12 +395,13 @@ class GLC(pathsim.blocks.Function):
         }
         super().__init__(func=self.func)
 
-    def func(self, c_T_inlet, y_T2_inlet, flow_g, flow_l):
+    def func(self, c_T_in, flow_l, y_T2_inlet, flow_g):
         new_params = self.params.copy()
-        new_params["c_T_inlet"] = c_T_inlet
+        new_params["c_T_in"] = c_T_in
+        new_params["flow_l"] = flow_l
         new_params["y_T2_in"] = y_T2_inlet
         new_params["flow_g"] = flow_g
-        new_params["flow_l"] = flow_l
+
 
         res, _ = solve(new_params)
 
