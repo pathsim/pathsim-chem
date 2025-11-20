@@ -58,7 +58,7 @@ def _calculate_properties(params):
     u_l = Q_l / A  # m/s, Superficial liquid velocity
     u_g0 = Q_g / A  # m/s, Superficial gas velocity at inlet
 
-    u_g_avg = calculate_average_velocity(u_g0, P_in, rho_l, nu_l, sigma_l, L, D)
+    [u_g_avg, u_g_L] = calculate_average_velocity(u_g0, P_in, rho_l, nu_l, sigma_l, L, D)
 
 
     # --- Dimensionless Numbers for Correlations ---
@@ -103,6 +103,7 @@ def _calculate_properties(params):
         "u_l": u_l,
         "u_g0": u_g0,
         "u_g_avg": u_g_avg,
+        "u_g_L": u_g_L,
         "epsilon_g": epsilon_g,
         "epsilon_l": epsilon_l,
         "E_l": E_l,
@@ -194,7 +195,7 @@ def calculate_average_velocity(
         # 5. Check for Convergence
         if abs(epsilon_g - epsilon_g_old) < tolerance:
             print(f"Converged after {i+1} iterations.")
-            return u_g_avg
+            return [u_g_avg, u_g_L]
 
     raise RuntimeError(f"Failed to converge for epsilon_g after {max_iter} iterations.")
 
