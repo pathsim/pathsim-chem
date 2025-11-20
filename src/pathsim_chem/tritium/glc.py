@@ -8,7 +8,7 @@ based on the model by C. Malara (1995).
 
 import numpy as np
 from scipy.integrate import solve_bvp
-from scipy.optimize import root_scalar
+from scipy.optimize import root_scalar, fsolve
 import scipy.constants as const
 import pathsim
 
@@ -36,6 +36,7 @@ def _calculate_properties(params):
     """
     T = params["T"]
     D = params["D"]
+    L = params["L"]
     flow_l = params["flow_l"]
     flow_g = params["flow_g"]
     P_in = params["P_in"]
@@ -57,11 +58,14 @@ def _calculate_properties(params):
     u_l = Q_l / A  # m/s, Superficial liquid velocity
     u_g0 = Q_g / A  # m/s, Superficial gas velocity at inlet
 
+    u_g_avg = calculate_average_velocity(u_g0, P_in, rho_l, nu_l, sigma_l, L, D)
+
+
     # --- Dimensionless Numbers for Correlations ---
     Bn = (g * D**2 * rho_l) / sigma_l  # Bond number
     Ga = (g * D**3) / nu_l**2  # Galilei number
     Sc = nu_l / D_T  # Schmidt number
-    Fr = u_g0 / (g * D) ** 0.5  # Froude number
+    Fr = u_g_avg / (g * D) ** 0.5  # Froude number
 
     # --- Hydrodynamic and Mass Transfer Parameters ---
     # Gas hold-up (ε_g) from correlation: C = ε_g / (1 - ε_g)^4
@@ -79,8 +83,8 @@ def _calculate_properties(params):
     epsilon_l = 1 - epsilon_g  # Liquid phase fraction
 
     # Dispersion coefficients
-    E_l = (D * u_g0) / ((13 * Fr) / (1 + 6.5 * (Fr**0.8)))
-    E_g = (0.2 * D**2) * u_g0
+    E_l = (D * u_g_avg) / ((13 * Fr) / (1 + 6.5 * (Fr**0.8)))
+    E_g = (0.2 * D**2) * u_g_avg
 
     # Interfacial area and mass transfer coefficients
     d_b = (26 * (Bn**-0.5) * (Ga**-0.12) * (Fr**-0.12)) * D
@@ -98,6 +102,7 @@ def _calculate_properties(params):
         "Q_g": Q_g,
         "u_l": u_l,
         "u_g0": u_g0,
+        "u_g_avg": u_g_avg,
         "epsilon_g": epsilon_g,
         "epsilon_l": epsilon_l,
         "E_l": E_l,
@@ -106,6 +111,92 @@ def _calculate_properties(params):
         "h_l": h_l,
     }
 
+def calculate_average_velocity(
+    u_g0: float,
+    P_0: float,
+    rho_l: float,
+    nu_l: float,
+    sigma_l: float,
+    L: float,
+    D: float,
+    g: float = 9.81,
+    max_iter: int = 100,
+    tolerance: float = 1e-6
+) -> float:
+    """
+    Iteratively calculates the average gas velocity and gas holdup.
+
+    This function resolves the circular dependency between gas velocity (which
+    depends on pressure and thus holdup) and gas holdup (which depends on
+    gas velocity via the Froude number).
+
+    Args:
+        u_g0: Inlet superficial gas velocity (m/s).
+        P_0: Gas pressure at the column inlet (z=0) (Pa).
+        rho_l: Density of the liquid (kg/m^3).
+        nu_l: Kinematic viscosity of the liquid (m^2/s).
+        sigma_l: Surface tension of the liquid (N/m).
+        L: Height of the bubble column (m).
+        D: Diameter of the bubble column (m).
+        g: Gravitational acceleration (m/s^2).
+        max_iter: Maximum number of iterations for the main loop.
+        tolerance: Convergence tolerance for gas holdup.
+
+    Returns:
+        A dictionary containing the converged average gas velocity ('u_g_avg')
+        and gas holdup ('epsilon_g').
+    """
+
+    # Calculate velocity-independent dimensionless numbers
+    # Bond number (Eq 10.1.2)
+    Bn = (g * D**2 * rho_l) / sigma_l
+    # Galilei number (Eq 10.1.3)
+    Ga = (g * D**3) / nu_l**2
+
+    # --- Iteration Start ---
+    # 1. Initial Guess: Calculate initial holdup using inlet velocity u_g0
+    Fr_initial = u_g0 / np.sqrt(g * D)
+    C_initial = 0.2 * (Bn**(1/8)) * (Ga**(1/12)) * Fr_initial
+
+    def holdup_equation(eps_g):
+        # Equation 10.4.1 rearranged for the root finder
+        return eps_g / ((1 - eps_g)**4) - C_initial
+
+    # Solve for the initial guess of epsilon_g
+    epsilon_g = fsolve(holdup_equation, 0.1)[0]
+
+    for i in range(max_iter):
+        # Store the old value for convergence check
+        epsilon_g_old = epsilon_g
+
+        # 2. Calculate Velocity Profile: Get outlet velocity u_g(L)
+        # using current epsilon_g (Eq 5.4)
+        denominator = P_0 - rho_l * g * (1 - epsilon_g) * L
+        if denominator <= 0:
+            raise ValueError("Pressure at the top of the column is non-positive. Check parameters.")
+        u_g_L = u_g0 * P_0 / denominator
+
+        # 3. Calculate Average Velocity
+        u_g_avg = (u_g0 + u_g_L) / 2
+
+        # 4. Update Gas Holdup: Recalculate holdup with the new average velocity
+        # Froude number (Eq 10.1.1) using average velocity
+        Fr = u_g_avg / np.sqrt(g * D)
+        # Right-hand side of the holdup correlation (Eq 10.4.1)
+        C = 0.2 * (Bn**(1/8)) * (Ga**(1/12)) * Fr
+
+        def holdup_equation_new(eps_g):
+            return eps_g / ((1 - eps_g)**4) - C
+
+        # Solve for the new epsilon_g
+        epsilon_g = fsolve(holdup_equation_new, epsilon_g_old)[0]
+
+        # 5. Check for Convergence
+        if abs(epsilon_g - epsilon_g_old) < tolerance:
+            print(f"Converged after {i+1} iterations.")
+            return u_g_avg
+
+    raise RuntimeError(f"Failed to converge for epsilon_g after {max_iter} iterations.")
 
 def _calculate_dimensionless_groups(params, phys_props):
     """
@@ -130,11 +221,11 @@ def _calculate_dimensionless_groups(params, phys_props):
     )
 
     # Unpack physical properties
-    rho_l, K_s, u_l, u_g0, epsilon_g, epsilon_l, E_l, E_g, a, h_l = (
+    rho_l, K_s, u_l, u_g_avg, epsilon_g, epsilon_l, E_l, E_g, a, h_l = (
         phys_props["rho_l"],
         phys_props["K_s"],
         phys_props["u_l"],
-        phys_props["u_g0"],
+        phys_props["u_g_avg"],
         phys_props["epsilon_g"],
         phys_props["epsilon_l"],
         phys_props["E_l"],
@@ -148,8 +239,8 @@ def _calculate_dimensionless_groups(params, phys_props):
     nu = ((c_T_in / K_s) ** 2) / P_in  # Equilibrium ratio
     Bo_l = u_l * L / (epsilon_l * E_l)  # Bodenstein number, liquid
     phi_l = a * h_l * L / u_l  # Transfer units, liquid
-    Bo_g = u_g0 * L / (epsilon_g * E_g)  # Bodenstein number, gas
-    phi_g = 0.5 * (R * T * c_T_in / P_in) * (a * h_l * L / u_g0)
+    Bo_g = u_g_avg * L / (epsilon_g * E_g)  # Bodenstein number, gas
+    phi_g = 0.5 * (R * T * c_T_in / P_in) * (a * h_l * L / u_g_avg) # Transfer units, gas
 
     return {
         "Bo_l": Bo_l,
