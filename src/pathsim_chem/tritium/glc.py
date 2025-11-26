@@ -242,12 +242,15 @@ def _process_results(solution, params, phys_props, dim_params):
     Returns:
         list: A list containing the results dictionary and the solution object.
     """
-    if not solution.success:
-        raise RuntimeError("BVP solver failed to converge.")
 
     # Unpack parameters
     c_T_in, P_in, T = params["c_T_in"], params["P_in"], params["T"]
     y_T2_in = params["y_T2_in"]
+
+    if not solution.success:
+        print("c_T_in: ",c_T_in)
+        print("y_T2_in :", y_T2_in)
+        raise RuntimeError("BVP solver failed to converge.")
 
     # Dimensionless results
     x_T_outlet_dimless = solution.y[0, 0]
