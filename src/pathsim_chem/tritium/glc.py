@@ -247,9 +247,14 @@ def _process_results(solution, params, phys_props, dim_params):
     c_T_in, P_in, T = params["c_T_in"], params["P_in"], params["T"]
     y_T2_in = params["y_T2_in"]
 
+    ########### Debugging ##########
+    print("c_T_in: ",c_T_in)
+    print("y_T2_in :", y_T2_in)
+    print("flow_l: ",params["flow_l"])
+    print("flow_g: ",params["flow_g"])
+
+
     if not solution.success:
-        print("c_T_in: ",c_T_in)
-        print("y_T2_in :", y_T2_in)
         raise RuntimeError("BVP solver failed to converge.")
 
     # Dimensionless results
