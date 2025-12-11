@@ -44,7 +44,7 @@ exclude_patterns = []
 html_theme = 'furo'
 html_static_path = ['_static', 'logos']
 html_css_files = ['custom.css']
-html_logo = 'logos/pathsim_logo.png'
+html_logo = 'logos/chem_logo.png'
 html_title = "PathSim-Chem Documentation"
 
 html_theme_options = {
