@@ -10,6 +10,7 @@ import numpy as np
 
 from pathsim.blocks.dynsys import DynamicalSystem
 from pathsim.events.schedule import ScheduleList
+from pathsim.utils.register import Register
 
 
 # BLOCK DEFIINITIONS ====================================================================
@@ -92,18 +93,6 @@ class Bubbler4(DynamicalSystem):
     of a full vial with an empty one.
     """
 
-    _port_map_out = {
-        "vial1": 0,
-        "vial2": 1,
-        "vial3": 2,
-        "vial4": 3,
-        "sample_out": 4,
-    }
-    _port_map_in = {
-        "sample_in_soluble": 0,
-        "sample_in_insoluble": 1,
-    }
-
     def __init__(
         self,
         conversion_efficiency=0.9,
@@ -149,7 +138,30 @@ class Bubbler4(DynamicalSystem):
             return np.hstack([x, sample_out])
 
         #initialization just like `DynamicalSystem` block
-        super().__init__(func_dyn=_fn_d, func_alg=_fn_a, initial_value=np.zeros(4))
+        super().__init__(
+            func_dyn=_fn_d, 
+            func_alg=_fn_a, 
+            initial_value=np.zeros(4),
+            )
+
+        # define port maps 
+        self.inputs = Register(
+            size=2, 
+            mapping={
+                "sample_in_soluble": 0,
+                "sample_in_insoluble": 1,
+                },
+            )
+        self.outputs = Register(
+            size=5, 
+            mapping={
+                "vial1": 0,
+                "vial2": 1,
+                "vial3": 2,
+                "vial4": 3,
+                "sample_out": 4,
+                },
+            )
 
         #create internal vial reset events
         self._create_reset_events()
