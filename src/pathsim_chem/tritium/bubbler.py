@@ -192,11 +192,6 @@ class Bubbler4(DynamicalSystem):
         Raises
         ------
         ValueError : If reset_times is not valid.
-
-        Returns
-        -------
-        events : list[ScheduleList]
-            list of reset events for vials
         """
 
         replacement_times = self.replacement_times
