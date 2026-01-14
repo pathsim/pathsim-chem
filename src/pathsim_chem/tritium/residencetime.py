@@ -9,7 +9,7 @@
 import numpy as np
 
 from pathsim.blocks.dynsys import DynamicalSystem
-
+from pathsim.utils.register import Register
 
 # BLOCKS ================================================================================
 
@@ -50,30 +50,35 @@ class ResidenceTime(DynamicalSystem):
 
     def __init__(self, tau=1, betas=None, gammas=None, initial_value=0, source_term=0):
 
-        #input validation
+        # input validation
         if np.isclose(tau, 0):
             raise ValueError(f"'tau' must be nonzero but is {tau}")
     
-        #time constant and input/output weights
+        # time constant and input/output weights
         self.tau = tau
         self.betas = 1 if betas is None else np.array(betas)
         self.gammas = 1 if gammas is None else np.array(gammas)
         self.source_term = source_term
 
-        #rhs of residence time ode
+        # rhs of residence time ode
         def _fn_d(x, u, t):
             return -x/self.tau + self.source_term + sum(self.betas*u)
 
-        #jacobian of rhs wrt x
+        # jacobian of rhs wrt x
         def _jc_d(x, u, t):
             return -1/self.tau
 
-        #output function of residence time ode
+        # output function of residence time ode
         def _fn_a(x, u, t):
             return self.gammas * x
 
-        #initialization just like `DynamicalSystem` block
-        super().__init__(func_dyn=_fn_d, jac_dyn=_jc_d, func_alg=_fn_a, initial_value=initial_value)
+        # initialization just like `DynamicalSystem` block
+        super().__init__(
+            func_dyn=_fn_d, 
+            jac_dyn=_jc_d, 
+            func_alg=_fn_a, 
+            initial_value=initial_value,
+            )
 
 
 class Process(ResidenceTime):
@@ -112,11 +117,11 @@ class Process(ResidenceTime):
         constant source term / generation term of the process
     """
 
-    #max number of ports
-    _n_out_max = 2
-
-    #maps for input and output port labels
-    _port_map_out = {"x": 0, "x/tau": 1}
-
     def __init__(self, tau=1, initial_value=0, source_term=0):
         super().__init__(tau, 1, [1, 1/tau], initial_value, source_term)
+
+        # define output port maps based on fractions
+        self.outputs = Register(
+            size=2, 
+            mapping={"x": 0, "x/tau": 1}
+            )
