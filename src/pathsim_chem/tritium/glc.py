@@ -11,6 +11,7 @@ from scipy.integrate import solve_bvp
 from scipy.optimize import root_scalar
 import scipy.constants as const
 import pathsim
+from pathsim.utils.register import Register
 
 # --- Physical Constants ---
 g = const.g  # m/s^2, Gravitational acceleration
@@ -248,11 +249,10 @@ def _process_results(solution, params, phys_props, dim_params):
     y_T2_in = params["y_T2_in"]
 
     ########### Debugging ##########
-    print("c_T_in: ",c_T_in)
+    print("c_T_in: ", c_T_in)
     print("y_T2_in :", y_T2_in)
-    print("flow_l: ",params["flow_l"])
-    print("flow_g: ",params["flow_g"])
-
+    print("flow_l: ", params["flow_l"])
+    print("flow_g: ", params["flow_g"])
 
     if not solution.success:
         raise RuntimeError("BVP solver failed to converge.")
@@ -364,24 +364,6 @@ class GLC(pathsim.blocks.Function):
         BCs: Boundary conditions type, "C-C" (Closed-Closed) or "O-C" (Open-Closed), default is "C-C"
     """
 
-    _port_map_in = {
-        "c_T_in": 0,
-        "flow_l":1,
-        "y_T2_in": 2,
-        "flow_g":3,
-    }
-
-    _port_map_out = {
-        "c_T_out": 0,
-        "y_T2_out": 1,
-        "eff": 2,
-        "P_out": 3,
-        "Q_l": 4,
-        "Q_g_out": 5,
-        "n_T_out_liquid": 6,
-        "n_T_out_gas": 7,
-    }
-
     def __init__(
         self,
         P_in,
@@ -401,6 +383,28 @@ class GLC(pathsim.blocks.Function):
             "elements": initial_nb_of_elements,
             "BCs": BCs,
         }
+        self.intputs = Register(
+            size=4,
+            mapping={
+                "c_T_in": 0,
+                "flow_l": 1,
+                "y_T2_inlet": 2,
+                "flow_g": 3,
+            },
+        )
+        self.outputs = Register(
+            size=8,
+            mapping={
+                "c_T_out": 0,
+                "y_T2_out": 1,
+                "eff": 2,
+                "P_out": 3,
+                "Q_l": 4,
+                "Q_g_out": 5,
+                "n_T_out_liquid": 6,
+                "n_T_out_gas": 7,
+            },
+        )
         super().__init__(func=self.func)
 
     def func(self, c_T_in, flow_l, y_T2_inlet, flow_g):
@@ -409,7 +413,6 @@ class GLC(pathsim.blocks.Function):
         new_params["flow_l"] = flow_l
         new_params["y_T2_in"] = y_T2_inlet
         new_params["flow_g"] = flow_g
-
 
         res, _ = solve(new_params)
 
