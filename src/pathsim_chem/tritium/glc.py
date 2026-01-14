@@ -383,7 +383,9 @@ class GLC(pathsim.blocks.Function):
             "elements": initial_nb_of_elements,
             "BCs": BCs,
         }
-        self.intputs = Register(
+        super().__init__(func=self.func)
+
+        self.inputs = Register(
             size=4,
             mapping={
                 "c_T_in": 0,
@@ -405,7 +407,6 @@ class GLC(pathsim.blocks.Function):
                 "n_T_out_gas": 7,
             },
         )
-        super().__init__(func=self.func)
 
     def func(self, c_T_in, flow_l, y_T2_inlet, flow_g):
         new_params = self.params.copy()
