@@ -93,6 +93,18 @@ class Bubbler4(DynamicalSystem):
     of a full vial with an empty one.
     """
 
+    input_port_labels = {
+        "sample_in_soluble": 0,
+        "sample_in_insoluble": 1,
+        }
+    output_port_labels = {
+        "vial1": 0,
+        "vial2": 1,
+        "vial3": 2,
+        "vial4": 3,
+        "sample_out": 4,
+        }
+
     def __init__(
         self,
         conversion_efficiency=0.9,
@@ -142,25 +154,6 @@ class Bubbler4(DynamicalSystem):
             func_dyn=_fn_d, 
             func_alg=_fn_a, 
             initial_value=np.zeros(4),
-            )
-
-        # define port maps 
-        self.inputs = Register(
-            size=2, 
-            mapping={
-                "sample_in_soluble": 0,
-                "sample_in_insoluble": 1,
-                },
-            )
-        self.outputs = Register(
-            size=5, 
-            mapping={
-                "vial1": 0,
-                "vial2": 1,
-                "vial3": 2,
-                "vial4": 3,
-                "sample_out": 4,
-                },
             )
 
         #create internal vial reset events
