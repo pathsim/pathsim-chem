@@ -364,6 +364,23 @@ class GLC(pathsim.blocks.Function):
         BCs: Boundary conditions type, "C-C" (Closed-Closed) or "O-C" (Open-Closed), default is "C-C"
     """
 
+    input_port_labels = {
+        "c_T_in": 0,
+        "flow_l": 1,
+        "y_T2_inlet": 2,
+        "flow_g": 3,
+        }
+    output_port_labels = {
+        "c_T_out": 0,
+        "y_T2_out": 1,
+        "eff": 2,
+        "P_out": 3,
+        "Q_l": 4,
+        "Q_g_out": 5,
+        "n_T_out_liquid": 6,
+        "n_T_out_gas": 7,
+        }
+
     def __init__(
         self,
         P_in,
@@ -384,29 +401,6 @@ class GLC(pathsim.blocks.Function):
             "BCs": BCs,
         }
         super().__init__(func=self.func)
-
-        self.inputs = Register(
-            size=4,
-            mapping={
-                "c_T_in": 0,
-                "flow_l": 1,
-                "y_T2_inlet": 2,
-                "flow_g": 3,
-            },
-        )
-        self.outputs = Register(
-            size=8,
-            mapping={
-                "c_T_out": 0,
-                "y_T2_out": 1,
-                "eff": 2,
-                "P_out": 3,
-                "Q_l": 4,
-                "Q_g_out": 5,
-                "n_T_out_liquid": 6,
-                "n_T_out_gas": 7,
-            },
-        )
 
     def func(self, c_T_in, flow_l, y_T2_inlet, flow_g):
         new_params = self.params.copy()

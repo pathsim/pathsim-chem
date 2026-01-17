@@ -115,13 +115,9 @@ class Process(ResidenceTime):
         initial value of state / initial quantity of process
     source_term : float
         constant source term / generation term of the process
-    """
+    """    
+    input_port_labels = None
+    output_port_labels = {"x": 0, "x/tau": 1}
 
     def __init__(self, tau=1, initial_value=0, source_term=0):
         super().__init__(tau, 1, [1, 1/tau], initial_value, source_term)
-
-        # define output port maps based on fractions
-        self.outputs = Register(
-            size=2, 
-            mapping={"x": 0, "x/tau": 1}
-            )

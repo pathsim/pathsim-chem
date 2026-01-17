@@ -29,6 +29,9 @@ class Splitter(Function):
         must sum up to one
     """
 
+    input_port_labels = {"in": 0}
+    output_port_labels = None
+
     def __init__(self, fractions=None):
 
         self.fractions = np.ones(1) if fractions is None else np.array(fractions)
@@ -39,13 +42,3 @@ class Splitter(Function):
 
         # initialize like `Function` block
         super().__init__(func=lambda u: self.fractions*u)
-
-        # define port maps based on fractions
-        self.inputs = Register(
-            size=1, 
-            mapping={"in": 0}
-            )
-        self.outputs = Register(
-            size=len(self.fractions), 
-            mapping={f"out {fr}": i for i, fr in enumerate(self.fractions)}
-            )
