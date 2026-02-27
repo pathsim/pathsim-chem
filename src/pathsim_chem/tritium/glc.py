@@ -349,19 +349,56 @@ def solve(params):
 
 
 class GLC(pathsim.blocks.Function):
-    """
-    Gas Liquid Contactor model block. Inherits from Function block.
+    r"""Counter-current bubble column gas-liquid contactor (GLC) for tritium extraction.
 
-    More details about the model can be found in: https://doi.org/10.13182/FST95-A30485
+    Solves the coupled, non-linear, second-order boundary value problem that
+    describes tritium transport between a liquid metal (LiPb) stream and a
+    purge gas in a counter-current bubble column. The model is based on
+    C. Malara (1995) and accounts for axial dispersion, interfacial mass
+    transfer via Sieverts' law, and hydrostatic pressure variation along
+    the column.
 
-    Args:
-        P_in: Inlet operating pressure [Pa]
-        L: Column height [m]
-        D: Column diameter [m]
-        T: Temperature [K]
-        g: Gravitational acceleration [m/s^2], default is 9.81
-        initial_nb_of_elements: Initial number of elements for BVP solver
-        BCs: Boundary conditions type, "C-C" (Closed-Closed) or "O-C" (Open-Closed), default is "C-C"
+    The block is intended for steady-state tritium extraction calculations
+    in fusion blanket systems. At each evaluation it computes
+    temperature-dependent fluid properties, dimensionless groups, and solves
+    the BVP using ``scipy.integrate.solve_bvp``.
+
+    Reference: https://doi.org/10.13182/FST95-A30485
+
+    **Input ports:**
+    ``c_T_in`` -- dissolved tritium concentration in liquid inlet [mol/m³],
+    ``flow_l`` -- liquid mass flow rate [kg/s],
+    ``y_T2_inlet`` -- T₂ mole fraction in inlet gas [-],
+    ``flow_g`` -- gas mass flow rate [kg/s].
+
+    **Output ports:**
+    ``c_T_out`` -- dissolved tritium concentration in liquid outlet [mol/m³],
+    ``y_T2_out`` -- T₂ mole fraction in outlet gas [-],
+    ``eff`` -- extraction efficiency [-],
+    ``P_out`` -- total gas outlet pressure [Pa],
+    ``Q_l`` -- liquid volumetric flow rate [m³/s],
+    ``Q_g_out`` -- gas volumetric flow rate at outlet [m³/s],
+    ``n_T_out_liquid`` -- tritium molar flow in liquid outlet [mol/s],
+    ``n_T_out_gas`` -- tritium molar flow in gas outlet [mol/s].
+
+    Parameters
+    ----------
+    P_in : float
+        Inlet operating pressure [Pa].
+    L : float
+        Column height [m].
+    D : float
+        Column diameter [m].
+    T : float
+        Operating temperature [K]. Used to compute temperature-dependent
+        LiPb properties (density, viscosity, Sieverts' constant, etc.).
+    BCs : str
+        Boundary condition type for the BVP: ``"C-C"`` (closed-closed) or
+        ``"O-C"`` (open-closed).
+    g : float, optional
+        Gravitational acceleration [m/s²]. Default: ``scipy.constants.g``.
+    initial_nb_of_elements : int, optional
+        Number of mesh elements for the initial BVP grid. Default: 20.
     """
 
     input_port_labels = {
