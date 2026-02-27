@@ -16,6 +16,7 @@ from pathsim_chem.thermodynamics import (
     NRTL,
     Wilson,
     UNIQUAC,
+    FloryHuggins,
 )
 
 
@@ -217,6 +218,76 @@ class TestUNIQUAC(unittest.TestCase):
             self.assertTrue(np.isfinite(g))
 
 
+class TestFloryHuggins(unittest.TestCase):
+
+    def test_init(self):
+        FH = FloryHuggins(
+            x=[0.8, 0.2],
+            r=[100.0],
+            chi0=[0.45],
+        )
+        self.assertEqual(FH.n, 2)
+
+    def test_binary_pure_solvent(self):
+        # Pure solvent: gamma_1 should be 1.0
+        FH = FloryHuggins(
+            x=[1.0, 0.0],
+            r=[100.0],
+            chi0=[0.45],
+        )
+        gamma1, gamma2 = eval_block(FH, 300)
+        self.assertAlmostEqual(gamma1, 1.0, places=10)
+
+    def test_binary_solvent_polymer(self):
+        # Solvent-polymer system with typical polystyrene-toluene values
+        FH = FloryHuggins(
+            x=[0.9, 0.1],
+            r=[100.0],
+            chi0=[0.45],
+        )
+        gamma1, gamma2 = eval_block(FH, 300)
+        self.assertGreater(gamma1, 0)
+        self.assertGreater(gamma2, 0)
+        self.assertTrue(np.isfinite(gamma1))
+        self.assertTrue(np.isfinite(gamma2))
+
+    def test_temperature_dependence(self):
+        FH = FloryHuggins(
+            x=[0.8, 0.2],
+            r=[50.0],
+            chi0=[0.3],
+            chi1=[100.0],
+        )
+        g300 = eval_block(FH, 300)
+        g400 = eval_block(FH, 400)
+        self.assertNotAlmostEqual(g300[0], g400[0], places=3)
+
+    def test_multiple_polymers(self):
+        # Solvent + two polymer species
+        FH = FloryHuggins(
+            x=[0.7, 0.2, 0.1],
+            r=[50.0, 200.0],
+            chi0=[0.4, 0.6],
+        )
+        gammas = eval_block(FH, 300)
+        self.assertEqual(len(gammas), 3)
+        for g in gammas:
+            self.assertGreater(g, 0)
+            self.assertTrue(np.isfinite(g))
+
+    def test_zero_chi_ideal_entropy(self):
+        # With chi=0, only combinatorial (entropic) contributions
+        FH = FloryHuggins(
+            x=[0.5, 0.5],
+            r=[10.0],
+            chi0=[0.0],
+        )
+        gamma1, gamma2 = eval_block(FH, 300)
+        # gamma_1 should still deviate from 1 due to entropy of mixing
+        self.assertGreater(gamma1, 0)
+        self.assertTrue(np.isfinite(gamma1))
+
+
 # SMOKE TEST ===========================================================================
 
 class TestSmokeAllActivityCoefficients(unittest.TestCase):
@@ -226,6 +297,7 @@ class TestSmokeAllActivityCoefficients(unittest.TestCase):
             NRTL(x=[0.5, 0.5], a=[[0, 1.0], [1.5, 0]], c=[[0, 0.3], [0.3, 0]]),
             Wilson(x=[0.5, 0.5], a=[[0, 0.5], [-0.3, 0]]),
             UNIQUAC(x=[0.5, 0.5], r=[2.1, 0.92], q=[1.97, 1.4], a=[[0, -1.0], [2.0, 0]]),
+            FloryHuggins(x=[0.8, 0.2], r=[100.0], chi0=[0.45]),
         ]
 
         for block in blocks:

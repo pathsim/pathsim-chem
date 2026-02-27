@@ -332,3 +332,110 @@ class UNIQUAC(Function):
 
         ln_gamma = ln_gamma_C + ln_gamma_R
         return tuple(np.exp(ln_gamma))
+
+
+class FloryHuggins(Function):
+    r"""Flory-Huggins activity coefficient model (IK-CAPE Chapter 4.4).
+
+    Computes liquid-phase activity coefficients for polymer-solvent systems.
+    The Flory-Huggins model accounts for the large size difference between
+    polymer and solvent molecules by using volume fractions instead of mole
+    fractions. It is the standard model for polymer solutions and is suitable
+    for systems with one solvent and one or more dissolved polymer species.
+
+    Component 1 is always the **solvent** (with segment number :math:`r_1 = 1`).
+    The remaining components are polymer species with segment numbers
+    :math:`r_{2i}` that represent the ratio of polymer to solvent molar volume.
+
+    **Input port:** ``T`` -- temperature [K].
+
+    **Output ports:** ``out_0``, ``out_1``, ... -- activity coefficients
+    :math:`\gamma_i` for each component (solvent first, then polymers).
+
+    The model uses volume fractions and the Flory-Huggins interaction
+    parameter :math:`\chi`:
+
+    .. math::
+
+        \phi_1 = \frac{x_1}{\bar{r}}, \quad
+        \phi_{2i} = \frac{r_{2i} x_{2i}}{\bar{r}}, \quad
+        \bar{r} = x_1 + \sum_i r_{2i} x_{2i}
+
+    Solvent activity coefficient:
+
+    .. math::
+
+        \ln \gamma_1 = 1 + \ln\frac{1}{\bar{r}} - \frac{1}{\bar{r}}
+        + (1 - \phi_1) \sum_i \phi_{2i} \chi_{1,2i}
+
+    Polymer activity coefficient for species k:
+
+    .. math::
+
+        \ln \gamma_{2k} = 1 + \ln\frac{r_{2k}}{\bar{r}} - \frac{r_{2k}}{\bar{r}}
+        + \phi_1 r_{2k} \left( \chi_{1,2k}
+        - \sum_i \phi_{2i} \chi_{1,2i} \right)
+
+    Temperature-dependent interaction parameter:
+
+    .. math::
+
+        \chi_{1,2i} = \chi^0_{1,2i} + \frac{\chi^1_{1,2i}}{T}
+
+    Parameters
+    ----------
+    x : array_like
+        Mole fractions [N] where ``x[0]`` is the solvent and ``x[1:]``
+        are the polymer species.
+    r : array_like
+        Segment numbers [N-1] for each polymer species. These represent
+        the ratio of the polymer molar volume to the solvent molar volume.
+    chi0 : array_like
+        Constant part of the Flory-Huggins interaction parameter [N-1].
+    chi1 : array_like, optional
+        Temperature-dependent part of :math:`\chi` [N-1]. Default: zeros.
+    """
+
+    input_port_labels = {"T": 0}
+
+    def __init__(self, x, r, chi0, chi1=None):
+        self.x = np.asarray(x, dtype=float)
+        self.n = len(self.x)
+        n_poly = self.n - 1
+
+        self.r_poly = np.asarray(r, dtype=float)
+        self.chi0 = np.asarray(chi0, dtype=float)
+        self.chi1 = np.zeros(n_poly) if chi1 is None else np.asarray(chi1, dtype=float)
+
+        super().__init__(func=self._eval)
+
+    def _eval(self, T):
+        x = self.x
+        x1 = x[0]
+        x2 = x[1:]
+
+        # interaction parameters
+        chi = self.chi0 + self.chi1 / T
+
+        # average segment number (r_solvent = 1)
+        r_bar = x1 + np.dot(self.r_poly, x2)
+
+        # volume fractions
+        phi1 = x1 / r_bar
+        phi2 = self.r_poly * x2 / r_bar
+
+        # weighted interaction sum
+        chi_sum = np.dot(phi2, chi)
+
+        # solvent activity coefficient
+        ln_gamma1 = 1.0 + np.log(1.0 / r_bar) - 1.0 / r_bar + (1.0 - phi1) * chi_sum
+
+        # polymer activity coefficients
+        ln_gamma2 = np.zeros(len(x2))
+        for k in range(len(x2)):
+            ln_gamma2[k] = (1.0 + np.log(self.r_poly[k] / r_bar)
+                            - self.r_poly[k] / r_bar
+                            + phi1 * self.r_poly[k] * (chi[k] - chi_sum))
+
+        ln_gamma = np.concatenate(([ln_gamma1], ln_gamma2))
+        return tuple(np.exp(ln_gamma))
