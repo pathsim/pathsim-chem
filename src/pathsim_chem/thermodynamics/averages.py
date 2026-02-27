@@ -328,3 +328,40 @@ class DIPPRSurfaceTension(Function):
     def _eval(self, *values):
         v = np.asarray(values)
         return (np.dot(self.xV, v**0.25) / np.sum(self.xV))**4
+
+
+class DIPPRLiquidConductivity(Function):
+    r"""DIPPR liquid thermal conductivity average (IK-CAPE code: DIKL).
+
+    .. math::
+
+        \text{average} = \sum_i \sum_j \frac{2 \, xv_i \, xv_j}
+        {1/\text{value}_i + 1/\text{value}_j}
+
+    where :math:`xv_i = x_i V_i / \sum_j x_j V_j` are the volume fractions.
+
+    Parameters
+    ----------
+    x : array_like
+        Mole fractions for each component.
+    V : array_like
+        Molar volumes [m^3/kmol] for each component.
+    """
+
+    output_port_labels = {"average": 0}
+
+    def __init__(self, x, V):
+        self.x = np.asarray(x, dtype=float)
+        self.V = np.asarray(V, dtype=float)
+        xV = self.x * self.V
+        self.xv = xV / np.sum(xV)
+        super().__init__(func=self._eval)
+
+    def _eval(self, *values):
+        v = np.asarray(values)
+        n = len(v)
+        result = 0.0
+        for i in range(n):
+            for j in range(n):
+                result += 2 * self.xv[i] * self.xv[j] / (1 / v[i] + 1 / v[j])
+        return result
