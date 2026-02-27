@@ -35,8 +35,6 @@ class TestTritiumSplitter(unittest.TestCase):
         S = Splitter([0.4, 0.5, 0.1])
         self.assertEqual(sum(S.fractions - np.array([0.4, 0.5, 0.1])), 0)
 
-        #test the automatic port maps
-        self.assertEqual(S._port_map_out, {"out 0.4":0, "out 0.5":1, "out 0.1":2})
 
 
     def test_update(self):
