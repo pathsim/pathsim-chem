@@ -14,3 +14,4 @@ __all__ = ["__version__"]
 
 #for direct block import from main package
 from .tritium import *
+from .thermodynamics import *
