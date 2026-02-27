@@ -105,53 +105,90 @@ class HeatExchanger(DynamicalSystem):
         self.rho_c = rho_c
         self.Cp_c = Cp_c
 
-        # per-cell quantities
         N = self.N_cells
-        V_cell_h = V_h / N
-        V_cell_c = V_c / N
-        UA_cell = UA / N
 
         # initial state: interleaved [T_h1, T_c1, T_h2, T_c2, ...]
         x0 = np.empty(2 * N)
-        x0[0::2] = T_h0  # hot side
-        x0[1::2] = T_c0  # cold side
+        x0[0::2] = T_h0
+        x0[1::2] = T_c0
 
-        # rhs of heat exchanger ode
+        # rhs of heat exchanger ode (vectorized)
         def _fn_d(x, u, t):
             T_h_in, T_c_in = u
-            dx = np.zeros(2 * N)
+            N = self.N_cells
 
-            _V_cell_h = self.V_h / self.N_cells
-            _V_cell_c = self.V_c / self.N_cells
-            _UA_cell = self.UA / self.N_cells
+            V_cell_h = self.V_h / N
+            V_cell_c = self.V_c / N
+            UA_cell = self.UA / N
 
-            alpha_h = _UA_cell / (self.rho_h * self.Cp_h * _V_cell_h)
-            alpha_c = _UA_cell / (self.rho_c * self.Cp_c * _V_cell_c)
-            flow_h = self.F_h / _V_cell_h
-            flow_c = self.F_c / _V_cell_c
+            fh = self.F_h / V_cell_h
+            fc = self.F_c / V_cell_c
+            ah = UA_cell / (self.rho_h * self.Cp_h * V_cell_h)
+            ac = UA_cell / (self.rho_c * self.Cp_c * V_cell_c)
 
-            for i in range(self.N_cells):
-                T_h_i = x[2*i]
-                T_c_i = x[2*i + 1]
+            T_h = x[0::2]
+            T_c = x[1::2]
 
-                # hot side: upstream is i-1, or inlet
-                T_h_prev = x[2*(i-1)] if i > 0 else T_h_in
-                # cold side: upstream (counter-current) is i+1, or inlet
-                T_c_next = x[2*(i+1) + 1] if i < self.N_cells - 1 else T_c_in
+            # upstream temperatures with boundary conditions
+            T_h_prev = np.empty(N)
+            T_h_prev[0] = T_h_in
+            T_h_prev[1:] = T_h[:-1]
 
-                dx[2*i]     = flow_h * (T_h_prev - T_h_i) - alpha_h * (T_h_i - T_c_i)
-                dx[2*i + 1] = flow_c * (T_c_next - T_c_i) + alpha_c * (T_h_i - T_c_i)
+            T_c_next = np.empty(N)
+            T_c_next[-1] = T_c_in
+            T_c_next[:-1] = T_c[1:]
+
+            dx = np.empty(2 * N)
+            dx[0::2] = fh * (T_h_prev - T_h) - ah * (T_h - T_c)
+            dx[1::2] = fc * (T_c_next - T_c) + ac * (T_h - T_c)
 
             return dx
 
+        # analytical jacobian (block-tridiagonal structure)
+        def _jc_d(x, u, t):
+            N = self.N_cells
+
+            V_cell_h = self.V_h / N
+            V_cell_c = self.V_c / N
+            UA_cell = self.UA / N
+
+            fh = self.F_h / V_cell_h
+            fc = self.F_c / V_cell_c
+            ah = UA_cell / (self.rho_h * self.Cp_h * V_cell_h)
+            ac = UA_cell / (self.rho_c * self.Cp_c * V_cell_c)
+
+            dim = 2 * N
+            J = np.zeros((dim, dim))
+
+            for i in range(N):
+                hi = 2 * i      # hot index
+                ci = 2 * i + 1  # cold index
+
+                # dT_h_i/dT_h_i, dT_h_i/dT_c_i
+                J[hi, hi] = -fh - ah
+                J[hi, ci] = ah
+
+                # dT_c_i/dT_h_i, dT_c_i/dT_c_i
+                J[ci, hi] = ac
+                J[ci, ci] = -fc - ac
+
+                # dT_h_i/dT_h_{i-1} (hot upstream coupling)
+                if i > 0:
+                    J[hi, 2*(i-1)] = fh
+
+                # dT_c_i/dT_c_{i+1} (cold upstream coupling, counter-current)
+                if i < N - 1:
+                    J[ci, 2*(i+1) + 1] = fc
+
+            return J
+
         # output: hot outlet = last cell hot, cold outlet = first cell cold
         def _fn_a(x, u, t):
-            T_h_out = x[2*(self.N_cells - 1)]    # last hot cell
-            T_c_out = x[1]                         # first cold cell
-            return np.array([T_h_out, T_c_out])
+            return np.array([x[2*(self.N_cells - 1)], x[1]])
 
         super().__init__(
             func_dyn=_fn_d,
+            jac_dyn=_jc_d,
             func_alg=_fn_a,
             initial_value=x0,
         )

@@ -108,9 +108,6 @@ class CSTR(DynamicalSystem):
         self.Cp = Cp
         self.UA = UA
 
-        # derived
-        self.tau = V / F
-
         # rhs of CSTR ode system
         def _fn_d(x, u, t):
             C_A, T = x
@@ -119,35 +116,32 @@ class CSTR(DynamicalSystem):
             tau = self.V / self.F
             k = self.k0 * np.exp(-self.Ea / (R_GAS * T))
             r = k * C_A**self.n
+            rcp = (-self.dH_rxn) / (self.rho * self.Cp)
+            ua_term = self.UA / (self.rho * self.Cp * self.V)
 
             dC_A = (C_A_in - C_A) / tau - r
-            dT = ((T_in - T) / tau
-                  + (-self.dH_rxn) / (self.rho * self.Cp) * r
-                  + self.UA / (self.rho * self.Cp * self.V) * (T_c - T))
+            dT = (T_in - T) / tau + rcp * r + ua_term * (T_c - T)
 
             return np.array([dC_A, dT])
 
         # jacobian of rhs wrt state [C_A, T]
         def _jc_d(x, u, t):
             C_A, T = x
+
             tau = self.V / self.F
             k = self.k0 * np.exp(-self.Ea / (R_GAS * T))
-
-            # partial derivatives
             dk_dT = k * self.Ea / (R_GAS * T**2)
 
-            # dr/dC_A and dr/dT
             dr_dCA = k * self.n * C_A**(self.n - 1) if C_A > 0 else 0.0
             dr_dT = dk_dT * C_A**self.n
 
             rcp = (-self.dH_rxn) / (self.rho * self.Cp)
             ua_term = self.UA / (self.rho * self.Cp * self.V)
 
-            J = np.array([
-                [-1.0/tau - dr_dCA,         -dr_dT],
+            return np.array([
+                [-1.0/tau - dr_dCA,           -dr_dT],
                 [rcp * dr_dCA,  -1.0/tau + rcp * dr_dT - ua_term]
             ])
-            return J
 
         # output function: well-mixed => outlet = state
         def _fn_a(x, u, t):

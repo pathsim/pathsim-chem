@@ -32,7 +32,6 @@ class TestCSTR(unittest.TestCase):
         self.assertEqual(C.rho, 1000.0)
         self.assertEqual(C.Cp, 4184.0)
         self.assertEqual(C.UA, 500.0)
-        self.assertAlmostEqual(C.tau, 10.0)
 
     def test_init_custom(self):
         """Test custom initialization."""
@@ -41,7 +40,6 @@ class TestCSTR(unittest.TestCase):
                  C_A0=1.5, T0=350.0)
         self.assertEqual(C.V, 2.0)
         self.assertEqual(C.F, 0.5)
-        self.assertAlmostEqual(C.tau, 4.0)
 
         C.set_solver(EUF, parent=None)
         self.assertTrue(np.allclose(C.engine.initial_value, [1.5, 350.0]))
