@@ -82,8 +82,18 @@ class DistillationTray(DynamicalSystem):
         def _vle(x_val):
             return self.alpha * x_val / (1.0 + (self.alpha - 1.0) * x_val)
 
+        # ensure u has expected 4 elements (handles framework probing)
+        def _pad_u(u):
+            u = np.atleast_1d(u)
+            if len(u) < 4:
+                padded = np.zeros(4)
+                padded[:len(u)] = u
+                return padded
+            return u
+
         # rhs of tray ode
         def _fn_d(x, u, t):
+            u = _pad_u(u)
             L_in, x_in, V_in, y_in = u
 
             x_tray = x[0]
@@ -95,6 +105,7 @@ class DistillationTray(DynamicalSystem):
 
         # jacobian wrt x
         def _jc_d(x, u, t):
+            u = _pad_u(u)
             L_in, x_in, V_in, y_in = u
             x_tray = x[0]
 
@@ -106,6 +117,7 @@ class DistillationTray(DynamicalSystem):
 
         # output: L_out, x, V_out, y (CMO: pass-through flows)
         def _fn_a(x, u, t):
+            u = _pad_u(u)
             L_in, x_in, V_in, y_in = u
             x_tray = x[0]
             y_tray = _vle(x_tray)
