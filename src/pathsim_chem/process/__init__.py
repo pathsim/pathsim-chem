@@ -11,6 +11,5 @@ from .distillation import *
 from .multicomponent_flash import *
 from .pfr import *
 from .mixer import *
-from .stream_splitter import *
 from .valve import *
 from .heater import *
