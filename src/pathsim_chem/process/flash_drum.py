@@ -87,8 +87,9 @@ class FlashDrum(DynamicalSystem):
 
         self.holdup = holdup
 
-        # default Antoine parameters: benzene / toluene (Pa, K)
-        self.antoine_A = np.array(antoine_A) if antoine_A is not None else np.array([15.9008, 16.0137])
+        # default Antoine parameters: benzene / toluene (ln(Pa), K)
+        # Converted from log10/mmHg: A_ln = ln(10)*A_log10 + ln(133.322)
+        self.antoine_A = np.array(antoine_A) if antoine_A is not None else np.array([20.7936, 20.9064])
         self.antoine_B = np.array(antoine_B) if antoine_B is not None else np.array([2788.51, 3096.52])
         self.antoine_C = np.array(antoine_C) if antoine_C is not None else np.array([-52.36, -53.67])
 
@@ -107,16 +108,23 @@ class FlashDrum(DynamicalSystem):
             P_sat = np.exp(self.antoine_A - self.antoine_B / (T + self.antoine_C))
             K = P_sat / P
 
-            d1 = K[0] - 1.0
-            d2 = K[1] - 1.0
+            # check bubble/dew point conditions
+            bubble = np.sum(z * K)   # if < 1, subcooled (all liquid)
+            dew = np.sum(z / K) if np.all(K > 1e-12) else np.inf  # if < 1, superheated (all vapor)
 
-            if abs(d1) < 1e-12 and abs(d2) < 1e-12:
+            if bubble <= 1.0:
+                # subcooled: all liquid
                 beta = 0.0
+            elif dew <= 1.0:
+                # superheated: all vapor
+                beta = 1.0
             else:
+                # two-phase: solve Rachford-Rice
+                d1 = K[0] - 1.0
+                d2 = K[1] - 1.0
                 den = d1 * d2
                 beta = -(z[0] * d1 + z[1] * d2) / den if abs(den) > 1e-12 else 0.0
-
-            beta = np.clip(beta, 0.0, 1.0)
+                beta = np.clip(beta, 0.0, 1.0)
 
             y = z * K / (1.0 + beta * (K - 1.0))
             x_eq = z / (1.0 + beta * (K - 1.0))
@@ -130,8 +138,18 @@ class FlashDrum(DynamicalSystem):
 
             return beta, y, x_eq
 
+        # ensure u has expected 4 elements (handles framework probing)
+        def _pad_u(u):
+            u = np.atleast_1d(u)
+            if len(u) < 4:
+                padded = np.zeros(4)
+                padded[:len(u)] = u
+                return padded
+            return u
+
         # rhs of flash drum ode
         def _fn_d(x, u, t):
+            u = _pad_u(u)
             F_in, z_1, T, P = u
             z = np.array([z_1, 1.0 - z_1])
 
@@ -144,6 +162,7 @@ class FlashDrum(DynamicalSystem):
 
         # algebraic output
         def _fn_a(x, u, t):
+            u = _pad_u(u)
             F_in, z_1, T, P = u
             z = np.array([z_1, 1.0 - z_1])
 

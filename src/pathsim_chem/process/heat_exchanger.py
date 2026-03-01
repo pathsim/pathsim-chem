@@ -112,8 +112,18 @@ class HeatExchanger(DynamicalSystem):
         x0[0::2] = T_h0
         x0[1::2] = T_c0
 
+        # ensure u has expected 2 elements (handles framework probing)
+        def _pad_u(u):
+            u = np.atleast_1d(u)
+            if len(u) < 2:
+                padded = np.zeros(2)
+                padded[:len(u)] = u
+                return padded
+            return u
+
         # rhs of heat exchanger ode (vectorized)
         def _fn_d(x, u, t):
+            u = _pad_u(u)
             T_h_in, T_c_in = u
             N = self.N_cells
 
