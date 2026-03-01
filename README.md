@@ -32,6 +32,7 @@ PathSim-Chem extends the [PathSim](https://github.com/pathsim/pathsim) simulatio
 - **Fugacity Coefficients** — EoS-based and virial equation fugacity calculations
 - **Excess Enthalpy & Departure** — NRTL, UNIQUAC, Wilson, Redlich-Kister excess enthalpy and EoS departure functions
 - **Chemical Reactions** — Equilibrium constants, kinetic rate constants, and power-law rate expressions
+- **Process Unit Operations** — CSTR, counter-current heat exchanger, flash drum, and distillation tray blocks with full ODE dynamics
 - **Tritium Processing** — GLC columns, TCAP cascades, bubblers, and splitters for tritium separation
 
 ## Install
