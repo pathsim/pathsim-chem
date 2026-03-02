@@ -72,6 +72,11 @@ class HeatExchanger(DynamicalSystem):
         "T_c_in": 1,
     }
 
+    output_port_labels = {
+        "T_h_out": 0,
+        "T_c_out": 1,
+    }
+
     def __init__(self, N_cells=5, F_h=0.1, F_c=0.1, V_h=0.5, V_c=0.5,
                  UA=500.0, rho_h=1000.0, Cp_h=4184.0, rho_c=1000.0, Cp_c=4184.0,
                  T_h0=370.0, T_c0=300.0):
@@ -101,12 +106,6 @@ class HeatExchanger(DynamicalSystem):
         self.Cp_c = Cp_c
 
         N = self.N_cells
-
-        # dynamic output port labels: outlets + per-cell profiles
-        self.output_port_labels = {"T_h_out": 0, "T_c_out": 1}
-        for i in range(N):
-            self.output_port_labels[f"T_h_{i+1}"] = 2 + i
-            self.output_port_labels[f"T_c_{i+1}"] = 2 + N + i
 
         # initial state: interleaved [T_h1, T_c1, T_h2, T_c2, ...]
         x0 = np.empty(2 * N)
@@ -193,16 +192,9 @@ class HeatExchanger(DynamicalSystem):
 
             return J
 
-        # output: outlets + per-cell profiles
-        # [T_h_out, T_c_out, T_h_1..T_h_N, T_c_1..T_c_N]
+        # output: hot outlet = last cell hot, cold outlet = first cell cold
         def _fn_a(x, u, t):
-            N = self.N_cells
-            out = np.empty(2 + 2 * N)
-            out[0] = x[2 * (N - 1)]   # T_h_out
-            out[1] = x[1]              # T_c_out
-            out[2:N + 2] = x[0::2]    # hot profile
-            out[N + 2:] = x[1::2]     # cold profile
-            return out
+            return np.array([x[2*(self.N_cells - 1)], x[1]])
 
         super().__init__(
             func_dyn=_fn_d,

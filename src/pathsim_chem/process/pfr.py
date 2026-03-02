@@ -76,6 +76,11 @@ class PFR(DynamicalSystem):
         "T_in": 1,
     }
 
+    output_port_labels = {
+        "C_out": 0,
+        "T_out": 1,
+    }
+
     def __init__(self, N_cells=5, V=1.0, F=0.1, k0=1e6, Ea=50000.0, n=1.0,
                  dH_rxn=-50000.0, rho=1000.0, Cp=4184.0,
                  C0=0.0, T0=300.0):
@@ -104,12 +109,6 @@ class PFR(DynamicalSystem):
         self.Cp = Cp
 
         N = self.N_cells
-
-        # dynamic output port labels: outlets + per-cell profiles
-        self.output_port_labels = {"C_out": 0, "T_out": 1}
-        for i in range(N):
-            self.output_port_labels[f"C_{i+1}"] = 2 + i
-            self.output_port_labels[f"T_{i+1}"] = 2 + N + i
 
         # initial state: interleaved [C_1, T_1, C_2, T_2, ...]
         x0 = np.empty(2 * N)
@@ -197,16 +196,10 @@ class PFR(DynamicalSystem):
 
             return J
 
-        # output: outlets + per-cell profiles
-        # [C_out, T_out, C_1..C_N, T_1..T_N]
+        # output: last cell values
         def _fn_a(x, u, t):
             N = self.N_cells
-            out = np.empty(2 + 2 * N)
-            out[0] = x[2 * (N - 1)]       # C_out
-            out[1] = x[2 * (N - 1) + 1]   # T_out
-            out[2:N + 2] = x[0::2]        # concentration profile
-            out[N + 2:] = x[1::2]         # temperature profile
-            return out
+            return np.array([x[2*(N-1)], x[2*(N-1) + 1]])
 
         super().__init__(
             func_dyn=_fn_d,
