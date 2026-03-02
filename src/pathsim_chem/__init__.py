@@ -16,3 +16,4 @@ __all__ = ["__version__"]
 from .tritium import *
 from .thermodynamics import *
 from .process import *
+from .neutronics import *
