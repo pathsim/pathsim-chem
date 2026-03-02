@@ -60,8 +60,14 @@ class TestHeatExchanger(unittest.TestCase):
         """Test port label definitions."""
         self.assertEqual(HeatExchanger.input_port_labels["T_h_in"], 0)
         self.assertEqual(HeatExchanger.input_port_labels["T_c_in"], 1)
-        self.assertEqual(HeatExchanger.output_port_labels["T_h_out"], 0)
-        self.assertEqual(HeatExchanger.output_port_labels["T_c_out"], 1)
+        hx = HeatExchanger(N_cells=5)
+        self.assertEqual(hx.output_port_labels["T_h_out"], 0)
+        self.assertEqual(hx.output_port_labels["T_c_out"], 1)
+        # per-cell ports
+        self.assertEqual(hx.output_port_labels["T_h_1"], 2)
+        self.assertEqual(hx.output_port_labels["T_c_1"], 7)
+        self.assertEqual(hx.output_port_labels["T_h_5"], 6)
+        self.assertEqual(hx.output_port_labels["T_c_5"], 11)
 
     def test_state_size(self):
         """Test that state vector has correct size."""

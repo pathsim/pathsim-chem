@@ -60,8 +60,14 @@ class TestPFR(unittest.TestCase):
         """Test port label definitions."""
         self.assertEqual(PFR.input_port_labels["C_in"], 0)
         self.assertEqual(PFR.input_port_labels["T_in"], 1)
-        self.assertEqual(PFR.output_port_labels["C_out"], 0)
-        self.assertEqual(PFR.output_port_labels["T_out"], 1)
+        pfr = PFR(N_cells=5)
+        self.assertEqual(pfr.output_port_labels["C_out"], 0)
+        self.assertEqual(pfr.output_port_labels["T_out"], 1)
+        # per-cell ports
+        self.assertEqual(pfr.output_port_labels["C_1"], 2)
+        self.assertEqual(pfr.output_port_labels["T_1"], 7)
+        self.assertEqual(pfr.output_port_labels["C_5"], 6)
+        self.assertEqual(pfr.output_port_labels["T_5"], 11)
 
     def test_state_size(self):
         """Test that state vector has correct size."""
