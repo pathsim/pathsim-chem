@@ -174,6 +174,9 @@ class TestUNIQUAC(unittest.TestCase):
         )
         gamma1, gamma2 = eval_block(U, 350)
         self.assertAlmostEqual(gamma1, 1.0, places=10)
+        # gamma_2 at infinite dilution must be finite (not NaN)
+        self.assertTrue(np.isfinite(gamma2))
+        self.assertGreater(gamma2, 0.0)
 
     def test_symmetric_case(self):
         # Identical r, q, symmetric a => gamma_1 = gamma_2
