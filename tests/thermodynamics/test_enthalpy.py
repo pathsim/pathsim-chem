@@ -201,27 +201,39 @@ class TestExcessEnthalpyRedlichKister(unittest.TestCase):
         )
         self.assertEqual(hE.n, 2)
 
-    def test_symmetric_binary(self):
-        # Simplest case: one-term Redlich-Kister with constant A
-        # h^E_ij = x_i*x_j/(x_i+x_j) * A * (x_i-x_j)
-        # For x=[0.5, 0.5]: h^E = 0.5 * 0.5 / 1.0 * A * 0 = 0
+    def test_constant_coeff_only(self):
+        # One-term Redlich-Kister with constant A_0:
+        # h^E = x_i*x_j/(x_i+x_j) * A_0
+        # For x=[0.5, 0.5], A_0=1000: h^E = 0.25/1.0 * 1000 = 250
         hE = ExcessEnthalpyRedlichKister(
             x=[0.5, 0.5],
             coeffs={(0, 1): [[1000.0]]},
         )
         result = eval_block_T(hE, 300)
-        self.assertAlmostEqual(result, 0.0, places=10)
+        self.assertAlmostEqual(result, 250.0, places=10)
 
-    def test_asymmetric_composition(self):
-        # x=[0.3, 0.7], one-term A=2000
-        # h^E = 0.5 * 0.3*0.7/1.0 * 2000 * (0.3-0.7) = 0.5 * 0.21 * 2000 * (-0.4) = -84
+    def test_two_term_polynomial(self):
+        # x=[0.3, 0.7], coeffs A_0=2000, A_1=500
+        # h^E = 0.21 * (2000 + 500*(-0.4)) = 0.21 * 1800 = 378
         hE = ExcessEnthalpyRedlichKister(
             x=[0.3, 0.7],
-            coeffs={(0, 1): [[2000.0]]},
+            coeffs={(0, 1): [[2000.0], [500.0]]},
         )
         result = eval_block_T(hE, 300)
-        expected = 0.5 * 0.3 * 0.7 / 1.0 * 2000.0 * (0.3 - 0.7)
+        expected = 0.3 * 0.7 / 1.0 * (2000.0 + 500.0 * (0.3 - 0.7))
         self.assertAlmostEqual(result, expected, places=5)
+
+    def test_antisymmetric_under_pair_swap(self):
+        # Odd-order RK terms should flip sign when (i,j) <-> (j,i),
+        # since x_d = x_i - x_j flips. Verify by swapping x values.
+        hE_a = ExcessEnthalpyRedlichKister(
+            x=[0.3, 0.7], coeffs={(0, 1): [[0.0], [1000.0]]},  # A_1 only
+        )
+        hE_b = ExcessEnthalpyRedlichKister(
+            x=[0.7, 0.3], coeffs={(0, 1): [[0.0], [1000.0]]},
+        )
+        self.assertAlmostEqual(eval_block_T(hE_a, 300),
+                               -eval_block_T(hE_b, 300), places=8)
 
     def test_temperature_dependent_coeffs(self):
         # A(T) = 1000 + 2*T
