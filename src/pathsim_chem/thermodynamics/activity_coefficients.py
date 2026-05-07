@@ -306,17 +306,22 @@ class UNIQUAC(Function):
         tau = np.exp(self.a + self.b_param / T + self.c_param * np.log(T) + self.d_param * T)
 
         # volume and surface fractions
-        V = self.r * x / np.dot(self.r, x)
-        F = self.q * x / np.dot(self.q, x)
+        sum_rx = np.dot(self.r, x)
+        sum_qx = np.dot(self.q, x)
         Fp = self.q_prime * x / np.dot(self.q_prime, x)
 
         # combinatorial part
+        # V_i / x_i = r_i / sum_j(r_j x_j) is well-defined even at x_i=0
+        # F_i / V_i = (q_i / r_i) * sum_rx / sum_qx (algebraic identity)
+        V_over_x = self.r / sum_rx
+        F_over_V = (self.q / self.r) * (sum_rx / sum_qx)
+
         ln_gamma_C = np.zeros(n)
         sum_xl = np.dot(x, self.l)
         for i in range(n):
-            ln_gamma_C[i] = (np.log(V[i] / x[i])
-                             + self.z / 2 * self.q[i] * np.log(F[i] / V[i])
-                             + self.l[i] - V[i] / x[i] * sum_xl)
+            ln_gamma_C[i] = (np.log(V_over_x[i])
+                             + self.z / 2 * self.q[i] * np.log(F_over_V[i])
+                             + self.l[i] - V_over_x[i] * sum_xl)
 
         # residual part
         ln_gamma_R = np.zeros(n)

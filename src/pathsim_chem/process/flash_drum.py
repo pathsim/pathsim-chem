@@ -43,11 +43,20 @@ class FlashDrum(DynamicalSystem):
 
     Dynamic States
     ---------------
-    The holdup moles of each component in the liquid phase:
+    The drum holds well-mixed liquid; vapor exits immediately at feed-flash
+    composition. Liquid component holdup follows a CSTR balance with the
+    feed-flash liquid as inlet:
 
     .. math::
 
-        \\frac{dN_i}{dt} = F z_i - V y_i - L x_i
+        \\frac{dN_i}{dt} = L_{in} \\, (x_{eq,i} - x_{drum,i})
+
+    where :math:`L_{in} = (1-\\beta) F` is the liquid feed to the drum,
+    :math:`x_{eq}` the Rachford-Rice liquid composition for the feed, and
+    :math:`x_{drum} = N / \\sum_j N_j` the drum liquid composition. Total
+    holdup :math:`M = \\sum_i N_i` is preserved exactly. The output ``x_1``
+    is :math:`x_{drum,1}` (dynamic), while ``y_1``, ``V_rate``, ``L_rate``
+    follow the instantaneous feed flash.
 
     Parameters
     ----------
@@ -147,20 +156,24 @@ class FlashDrum(DynamicalSystem):
                 return padded
             return u
 
-        # rhs of flash drum ode
+        # rhs of flash drum ode: liquid CSTR fed by feed-flash liquid
         def _fn_d(x, u, t):
             u = _pad_u(u)
             F_in, z_1, T, P = u
             z = np.array([z_1, 1.0 - z_1])
 
-            beta, y, x_eq = _solve_vle(z, T, P)
+            if F_in <= 0.0:
+                return np.zeros(2)
 
-            V_rate = beta * F_in
-            L_rate = (1.0 - beta) * F_in
+            beta, _, x_eq = _solve_vle(z, T, P)
+            L_in = (1.0 - beta) * F_in
 
-            return F_in * z - V_rate * y - L_rate * x_eq
+            M = x.sum()
+            x_drum = x / M if M > 1e-30 else x_eq
 
-        # algebraic output
+            return L_in * (x_eq - x_drum)
+
+        # algebraic output: V/L/y from feed flash (instantaneous), x from drum
         def _fn_a(x, u, t):
             u = _pad_u(u)
             F_in, z_1, T, P = u
@@ -171,7 +184,10 @@ class FlashDrum(DynamicalSystem):
             V_rate = beta * F_in
             L_rate = (1.0 - beta) * F_in
 
-            return np.array([V_rate, L_rate, y[0], x_eq[0]])
+            M = x.sum()
+            x_drum = x / M if M > 1e-30 else x_eq
+
+            return np.array([V_rate, L_rate, y[0], x_drum[0]])
 
         super().__init__(
             func_dyn=_fn_d,

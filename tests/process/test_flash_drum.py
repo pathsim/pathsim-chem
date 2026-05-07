@@ -136,6 +136,62 @@ class TestFlashDrum(unittest.TestCase):
         self.assertAlmostEqual(F.outputs[0], 0.0)  # V_rate
         self.assertAlmostEqual(F.outputs[1], 0.0)  # L_rate
 
+    def test_holdup_dynamics_drives_to_equilibrium(self):
+        """At steady state the drum liquid composition must equal the RR
+        equilibrium liquid composition for the feed."""
+        F = FlashDrum(holdup=100.0, N0=[80.0, 20.0])  # off-equilibrium init
+        F.set_solver(EUF, parent=None)
+
+        # T=370 K gives two-phase region for benzene/toluene defaults at 1 atm
+        T, P = 370.0, 101325.0
+        u = np.array([10.0, 0.5, T, P])
+
+        # at the RR equilibrium x_eq, dN/dt must vanish
+        # compute x_eq via direct VLE (binary RR with same Antoine defaults)
+        Psat = np.exp(F.antoine_A - F.antoine_B / (T + F.antoine_C))
+        K = Psat / P
+        z = np.array([0.5, 0.5])
+        d1, d2 = K[0] - 1, K[1] - 1
+        beta = -(z[0]*d1 + z[1]*d2) / (d1*d2)
+        x_eq = z / (1.0 + beta * (K - 1.0))
+        x_eq = x_eq / x_eq.sum()
+
+        # state at equilibrium with same total holdup
+        N_eq = 100.0 * x_eq
+        dN = F.op_dyn(N_eq, u, 0.0)
+        self.assertTrue(np.allclose(dN, 0.0, atol=1e-10))
+
+        # state away from equilibrium: dN must be non-zero
+        dN_off = F.op_dyn(np.array([80.0, 20.0]), u, 0.0)
+        self.assertGreater(np.linalg.norm(dN_off), 1e-3)
+
+    def test_holdup_total_moles_conserved(self):
+        """dM/dt = sum(dN/dt) must be exactly zero (perfect level control)."""
+        F = FlashDrum(holdup=100.0, N0=[70.0, 30.0])
+        F.set_solver(EUF, parent=None)
+
+        u = np.array([5.0, 0.4, 355.0, 101325.0])
+        for state in (np.array([70.0, 30.0]),
+                      np.array([20.0, 80.0]),
+                      np.array([1.0, 99.0])):
+            dN = F.op_dyn(state, u, 0.0)
+            self.assertAlmostEqual(dN.sum(), 0.0, places=10,
+                                    msg=f"dM/dt != 0 for state {state}")
+
+    def test_x_output_uses_drum_state(self):
+        """x_1 output must reflect drum state, not feed composition."""
+        F = FlashDrum(holdup=100.0, N0=[90.0, 10.0])
+        F.set_solver(EUF, parent=None)
+
+        F.inputs[0] = 10.0
+        F.inputs[1] = 0.3       # different from drum
+        F.inputs[2] = 360.0
+        F.inputs[3] = 101325.0
+
+        F.update(None)
+        # drum state x_1 = 90/100 = 0.9
+        self.assertAlmostEqual(F.outputs[3], 0.9, places=8)
+
 
 # RUN TESTS LOCALLY ====================================================================
 

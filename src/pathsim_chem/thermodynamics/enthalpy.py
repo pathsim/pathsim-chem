@@ -301,22 +301,24 @@ class ExcessEnthalpyRedlichKister(Function):
     Computes the molar excess enthalpy using a Redlich-Kister polynomial
     expansion. This is a flexible, empirical model for representing binary
     excess properties. For a multi-component mixture, the excess enthalpy
-    is computed as a sum of binary pair contributions:
+    is summed over the unique binary pairs supplied:
 
     .. math::
 
-        h^E = \frac{1}{2} \sum_i \sum_j h^E_{ij}
+        h^E = \sum_{(i,j)} h^E_{ij}
 
-    Each binary pair contribution:
+    Each binary pair contribution follows the standard Redlich-Kister form
 
     .. math::
 
         h^E_{ij} = \frac{x_i x_j}{x_i + x_j}
-        \left(A(T) x_d + B(T) x_d^2 + C(T) x_d^3 + \ldots\right)
+        \left(A_0(T) + A_1(T) x_d + A_2(T) x_d^2 + \ldots\right)
 
-    where :math:`x_d = x_i - x_j` and the coefficients :math:`A(T)`,
-    :math:`B(T)`, ... are temperature-dependent polynomials:
-    :math:`A(T) = a_0 + a_1 T + a_2 T^2 + \ldots`
+    where :math:`x_d = x_i - x_j` and each :math:`A_k(T)` is a temperature
+    polynomial :math:`A_k(T) = a_{k,0} + a_{k,1} T + a_{k,2} T^2 + \ldots`.
+    For a true binary system :math:`x_i + x_j = 1` and the prefactor
+    reduces to :math:`x_i x_j`; in multicomponent mixtures the
+    :math:`/(x_i+x_j)` term provides the symmetric extension.
 
     **Input port:** ``T`` -- temperature [K].
 
@@ -328,12 +330,15 @@ class ExcessEnthalpyRedlichKister(Function):
         Mole fractions [N].
     coeffs : dict
         Redlich-Kister coefficients keyed by binary pair ``(i, j)`` as tuples.
-        Each value is a list of polynomial coefficient arrays, one per
-        Redlich-Kister term. Example for a single pair (0,1) with 3 terms::
+        Provide each unordered pair only once (e.g. ``(0, 1)``, not also
+        ``(1, 0)``). Each value is a list of polynomial coefficient arrays,
+        one per Redlich-Kister term. Example for a single pair (0,1) with
+        3 terms::
 
             {(0, 1): [[a0, a1], [b0, b1], [c0]]}
 
-        This gives A(T)=a0+a1*T, B(T)=b0+b1*T, C(T)=c0.
+        This gives A_0(T)=a0+a1*T, A_1(T)=b0+b1*T, A_2(T)=c0, where
+        :math:`A_k` multiplies :math:`x_d^k`.
     """
 
     input_port_labels = {"T": 0}
@@ -358,9 +363,9 @@ class ExcessEnthalpyRedlichKister(Function):
 
             xd = xi - xj
 
-            # evaluate each Redlich-Kister term
+            # evaluate Redlich-Kister polynomial: A_0 + A_1*xd + A_2*xd^2 + ...
             pair_hE = 0.0
-            xd_power = xd
+            xd_power = 1.0
             for poly_coeffs in terms:
                 # temperature polynomial: c0 + c1*T + c2*T^2 + ...
                 coeff_val = 0.0
@@ -373,7 +378,7 @@ class ExcessEnthalpyRedlichKister(Function):
 
             hE += xi * xj / x_sum * pair_hE
 
-        return 0.5 * hE
+        return hE
 
 
 # ENTHALPY DEPARTURE FROM EOS (9.7) =====================================================

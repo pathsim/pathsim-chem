@@ -35,11 +35,20 @@ class MultiComponentFlash(DynamicalSystem):
 
     Dynamic States
     ---------------
-    The holdup moles of each component in the liquid phase:
+    The drum holds well-mixed liquid; vapor exits immediately at feed-flash
+    composition. Liquid component holdup follows a CSTR balance with the
+    feed-flash liquid as inlet:
 
     .. math::
 
-        \\frac{dN_i}{dt} = F z_i - V y_i - L x_i
+        \\frac{dN_i}{dt} = L_{in} \\, (x_{eq,i} - x_{drum,i})
+
+    where :math:`L_{in} = (1-\\beta) F` is the liquid feed to the drum,
+    :math:`x_{eq}` the Rachford-Rice liquid composition for the feed, and
+    :math:`x_{drum} = N / \\sum_j N_j` the drum liquid composition. Total
+    holdup :math:`M = \\sum_i N_i` is preserved exactly. Outputs ``x_i``
+    are :math:`x_{drum,i}` (dynamic); ``V_rate``, ``L_rate``, ``y_i`` come
+    from the instantaneous feed flash.
 
     Parameters
     ----------
@@ -207,7 +216,7 @@ class MultiComponentFlash(DynamicalSystem):
             z_last = 1.0 - np.sum(z_partial)
             return np.append(z_partial, z_last)
 
-        # rhs of flash drum ode
+        # rhs of flash drum ode: liquid CSTR fed by feed-flash liquid
         def _fn_d(x, u, t):
             u = _pad_u(u)
             F_in = u[0]
@@ -215,14 +224,18 @@ class MultiComponentFlash(DynamicalSystem):
             T = u[nc]
             P = u[nc + 1]
 
-            beta, y, x_eq = _solve_vle(z, T, P)
+            if F_in <= 0.0:
+                return np.zeros(nc)
 
-            V_rate = beta * F_in
-            L_rate = (1.0 - beta) * F_in
+            beta, _, x_eq = _solve_vle(z, T, P)
+            L_in = (1.0 - beta) * F_in
 
-            return F_in * z - V_rate * y - L_rate * x_eq
+            M = x.sum()
+            x_drum = x / M if M > 1e-30 else x_eq
 
-        # algebraic output
+            return L_in * (x_eq - x_drum)
+
+        # algebraic output: V/L/y from feed flash (instant), x from drum state
         def _fn_a(x, u, t):
             u = _pad_u(u)
             F_in = u[0]
@@ -235,12 +248,15 @@ class MultiComponentFlash(DynamicalSystem):
             V_rate = beta * F_in
             L_rate = (1.0 - beta) * F_in
 
+            M = x.sum()
+            x_drum = x / M if M > 1e-30 else x_eq
+
             # output: V_rate, L_rate, y_1..y_{nc-1}, x_1..x_{nc-1}
             result = np.empty(2 + 2 * (nc - 1))
             result[0] = V_rate
             result[1] = L_rate
             result[2:2 + nc - 1] = y[:nc - 1]
-            result[2 + nc - 1:] = x_eq[:nc - 1]
+            result[2 + nc - 1:] = x_drum[:nc - 1]
 
             return result
 
