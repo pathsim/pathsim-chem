@@ -29,6 +29,10 @@ dependencies = [
     "pathsim>0.13",
     "numpy>=1.15",
     "scipy>=1.2",
+    # If a dependency ships native code that can't be installed in Pyodide,
+    # tag it with `; sys_platform != 'emscripten'` so a normal pip install
+    # still pulls it eagerly but micropip in the browser skips it. Pair
+    # this with a defensive re-export in `pathsim_chem/__init__.py`.
 ]
 
 [project.optional-dependencies]
