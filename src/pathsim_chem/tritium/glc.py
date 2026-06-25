@@ -272,105 +272,33 @@ def _process_results(S_ends, params, phys_props, dim_params):
     P_T2_out = y_T2_out * P_out
     P_T2_in = y_T2_in * P_in
 
-    # Mass balance check
-    n_T_in_liquid = c_T_in * Q_l  # mol/s
-    n_T_out_liquid = c_T_out * Q_l  # mol/s
-    n_T2_in_gas = P_T2_in * Q_g / (R * T)  # mol/s
-    n_T_in_gas = n_T2_in_gas * 2  # mol/s
+    # Tritium molar flows from the converged solution (mol/s). Each T2 molecule
+    # carries two tritium atoms.
+    n_T_in_liquid = c_T_in * Q_l
+    n_T_in_gas = 2 * P_T2_in * Q_g / (R * T)
+    n_T_out_liquid = c_T_out * Q_l
     Q_g_out = Q_g * (P_in / P_out)  # m3/s
-    n_T2_out_gas = P_T2_out * Q_g_out / (R * T)  # mol/s
-    n_T_out_gas = n_T2_out_gas * 2  # mol/s
+    n_T_out_gas = 2 * P_T2_out * Q_g_out / (R * T)
 
-    # Adjust for any mass balance error
-    mass_balance_error = (n_T_in_liquid + n_T_in_gas) - (n_T_out_liquid + n_T_out_gas)
-    n_T_out_gas += mass_balance_error * efficiency
-    n_T_out_liquid += mass_balance_error * (1 - efficiency)
+    n_T_in = n_T_in_liquid + n_T_in_gas
+    n_T_out = n_T_out_liquid + n_T_out_gas
 
-    results = {
-        "Total tritium in [mol/s]": n_T_in_liquid + n_T_in_gas,
-        "Total tritium out [mol/s]": n_T_out_liquid + n_T_out_gas,
-        "tritium_out_liquid [mol/s]": n_T_out_liquid,
-        "tritium_out_gas [mol/s]": n_T_out_gas,
-        "extraction_efficiency [fraction]": efficiency,
+    # Mass-balance residual reported as a diagnostic. For closed-closed (C-C)
+    # boundary conditions it is at numerical-noise level; for open-closed (O-C)
+    # it reflects the dispersive flux neglected by the open inlet condition.
+    return {
         "c_T_outlet [mol/m^3]": c_T_out,
-        "P_T2_inlet_gas [Pa]": P_T2_in,
-        "P_T2_outlet_gas [Pa]": P_T2_out,
         "y_T2_outlet_gas": y_T2_out,
-        "total_gas_P_inlet [Pa]": P_in,
+        "extraction_efficiency [fraction]": efficiency,
         "total_gas_P_outlet [Pa]": P_out,
         "liquid_vol_flow [m^3/s]": Q_l,
         "gas_vol_flow_outlet [m^3/s]": Q_g_out,
+        "tritium_out_liquid [mol/s]": n_T_out_liquid,
+        "tritium_out_gas [mol/s]": n_T_out_gas,
+        "Total tritium in [mol/s]": n_T_in,
+        "Total tritium out [mol/s]": n_T_out,
+        "mass_balance_residual [mol/s]": n_T_in - n_T_out,
     }
-
-    # Add all calculated parameters to the results dictionary
-    results.update(phys_props)
-    results.update(dim_params)
-
-    return results
-
-
-def solve(params):
-    """
-    Main solver function for the bubble column model.
-
-    Builds the physical properties and dimensionless groups, then solves the
-    boundary value problem with the native :class:`~pathsim.blocks.BVP1D` block.
-
-    Args:
-        params (dict): A dictionary of all input parameters for the model,
-                       including operational conditions and geometry.
-
-    Returns:
-        list: A list containing:
-              - dict: A dictionary containing the simulation results.
-              - pathsim.blocks.BVP1D: The BVP block, exposing the refined mesh
-                (``.x``) and the sampled solution (``.solution()``).
-
-    Raises:
-        ValueError: If the calculated gas outlet pressure is non-positive.
-        RuntimeError: If the BVP solver fails to converge.
-    """
-    # Adjust inlet gas concentration to avoid numerical instability at zero
-    y_T2_in = max(params["y_T2_in"], 1e-20)
-
-    # 1. Calculate physical, hydrodynamic, and mass transfer properties
-    phys_props = _calculate_properties(params)
-
-    # Pre-solver check for non-physical outlet pressure
-    P_out = params["P_in"] - (
-        phys_props["rho_l"] * (1 - phys_props["epsilon_g"]) * g * params["L"]
-    )
-    if P_out <= 0:
-        raise ValueError(
-            f"Calculated gas outlet pressure is non-positive ({P_out:.2e} Pa). "
-            "Check input parameters P_in, L, etc."
-        )
-
-    # 2. Calculate dimensionless groups for the ODE system
-    dim_params = _calculate_dimensionless_groups(params, phys_props)
-
-    # 3. Solve the boundary value problem with the native BVP1D block, sampling
-    #    the two domain endpoints (xi=0 and xi=1)
-    bvp = BVP1D(
-        fun=lambda x, y, p, u: _ode_system(x, y, dim_params),
-        bc=lambda ya, yb, p, u: _boundary_conditions(
-            ya, yb, dim_params, y_T2_in, params["BCs"]
-        ),
-        n=4,
-        domain=(0.0, 1.0),
-        n_nodes=params["elements"] + 1,
-        x_eval=np.array([0.0, 1.0]),
-        tol=1e-5,
-        max_nodes=10000,
-    )
-    bvp.update(0.0)
-    if not bvp.success:
-        raise RuntimeError("BVP solver failed to converge.")
-
-    # 4. Process and return the results in a dimensional format
-    results = _process_results(bvp.solution(), params, phys_props, dim_params)
-
-    return [results, bvp]
 
 
 class GLC(BVP1D):
