@@ -87,6 +87,10 @@ class TestGLC(unittest.TestCase):
         self.assertEqual(len(blk.inputs), 4)
         for label in ("c_T_in", "flow_l", "y_T2_inlet", "flow_g"):
             self.assertIn(label, blk.input_port_labels)
+        #eight named dimensional output ports
+        for label in ("c_T_out", "y_T2_out", "eff", "P_out", "Q_l", "Q_g_out",
+                      "n_T_out_liquid", "n_T_out_gas"):
+            self.assertIn(label, blk.output_port_labels)
         #no successful solve yet, so no dimensional results
         self.assertIsNone(blk.results())
 
@@ -139,17 +143,25 @@ class TestGLC(unittest.TestCase):
                                res["Total tritium out [mol/s]"], places=12)
 
 
-    def test_output_layout(self):
-        """The block output is the dimensionless solution at the two endpoints."""
+    def test_output_ports(self):
+        """The eight dimensional output ports match the results dictionary."""
         blk = GLC(BCs="C-C", **_BASE)
         blk.inputs.update_from_array(np.array(_INPUT))
         blk.update(0.0)
 
-        #row-major [x_T(0), x_T(1), ...]; output[0] is the dimensionless outlet
-        #liquid concentration, i.e. c_T_out / c_T_in
         res = blk.results()
-        self.assertAlmostEqual(blk.outputs[0],
-                               res["c_T_outlet [mol/m^3]"] / _INPUT[0], places=12)
+        for label, key in (
+            ("c_T_out", "c_T_outlet [mol/m^3]"),
+            ("y_T2_out", "y_T2_outlet_gas"),
+            ("eff", "extraction_efficiency [fraction]"),
+            ("P_out", "total_gas_P_outlet [Pa]"),
+            ("Q_l", "liquid_vol_flow [m^3/s]"),
+            ("Q_g_out", "gas_vol_flow_outlet [m^3/s]"),
+            ("n_T_out_liquid", "tritium_out_liquid [mol/s]"),
+            ("n_T_out_gas", "tritium_out_gas [mol/s]"),
+        ):
+            idx = blk.output_port_labels[label]
+            self.assertAlmostEqual(blk.outputs[idx], res[key], places=12)
 
 
     def test_unknown_bc_raises(self):
@@ -218,7 +230,9 @@ class TestGLC(unittest.TestCase):
             blocks=[*srcs, block, sco],
             connections=(
                 [Connection(srcs[i], block[i]) for i in range(4)]
-                + [Connection(block[0], sco[0])]
+                #connect the named efficiency output port, as a downstream
+                #consumer would
+                + [Connection(block["eff"], sco[0])]
             ),
             log=False,
         )
@@ -227,7 +241,8 @@ class TestGLC(unittest.TestCase):
         self.assertTrue(block.success)
         res = block.results()
         np.testing.assert_allclose(
-            block.outputs[0], res["c_T_outlet [mol/m^3]"] / _INPUT[0], atol=1e-12
+            block.outputs[block.output_port_labels["eff"]],
+            res["extraction_efficiency [fraction]"], atol=1e-12
         )
 
 

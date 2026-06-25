@@ -383,22 +383,18 @@ class GLC(BVP1D):
     transfer via Sieverts' law, and hydrostatic pressure variation along
     the column.
 
-    The block is a thin specialisation of the native
-    :class:`~pathsim.blocks.BVP1D` block: the constructor seeds the parent with
-    the Malara right-hand side and boundary conditions, and the four block
-    inputs supply the per-evaluation boundary data. The hydrodynamic
-    correlations and dimensionless groups are computed from the current input
-    inside the collocation callbacks. As for any ``BVP1D``, the solve is
-    warm-started from the previous mesh and skipped entirely when the input is
-    unchanged.
+    The block is a specialisation of the native :class:`~pathsim.blocks.BVP1D`
+    block: the constructor seeds the parent with the Malara right-hand side and
+    boundary conditions, and the four block inputs supply the per-evaluation
+    boundary data. The hydrodynamic correlations and dimensionless groups are
+    computed from the current input inside the collocation callbacks. As for any
+    ``BVP1D``, the solve is warm-started from the previous mesh and skipped
+    entirely when the input is unchanged. After each solve the dimensionless
+    endpoint solution is post-processed into the dimensional output ports.
 
-    The block output is the dimensionless solution sampled at the two domain
-    endpoints (``xi=0`` liquid outlet, ``xi=1`` liquid inlet), in the
-    :class:`~pathsim.blocks.BVP1D` row-major layout
-    ``[x_T(0), x_T(1), x_T'(0), x_T'(1), y_T2(0), y_T2(1), y_T2'(0), y_T2'(1)]``.
-    Use :meth:`results` to post-process the current solution into dimensional
-    quantities (concentrations, extraction efficiency, molar flows, mass
-    balance).
+    Use :meth:`results` to retrieve the full dimensional result dictionary,
+    which additionally contains partial pressures, physical properties and the
+    dimensionless groups.
 
     Reference: https://doi.org/10.13182/FST95-A30485
 
@@ -407,6 +403,16 @@ class GLC(BVP1D):
     ``flow_l`` -- liquid mass flow rate [kg/s],
     ``y_T2_inlet`` -- T₂ mole fraction in inlet gas [-],
     ``flow_g`` -- gas mass flow rate [kg/s].
+
+    **Output ports:**
+    ``c_T_out`` -- dissolved tritium concentration in liquid outlet [mol/m³],
+    ``y_T2_out`` -- T₂ mole fraction in outlet gas [-],
+    ``eff`` -- extraction efficiency [-],
+    ``P_out`` -- total gas outlet pressure [Pa],
+    ``Q_l`` -- liquid volumetric flow rate [m³/s],
+    ``Q_g_out`` -- gas volumetric flow rate at outlet [m³/s],
+    ``n_T_out_liquid`` -- tritium molar flow in liquid outlet [mol/s],
+    ``n_T_out_gas`` -- tritium molar flow in gas outlet [mol/s].
 
     Parameters
     ----------
@@ -438,6 +444,16 @@ class GLC(BVP1D):
         "flow_l": 1,
         "y_T2_inlet": 2,
         "flow_g": 3,
+        }
+    output_port_labels = {
+        "c_T_out": 0,
+        "y_T2_out": 1,
+        "eff": 2,
+        "P_out": 3,
+        "Q_l": 4,
+        "Q_g_out": 5,
+        "n_T_out_liquid": 6,
+        "n_T_out_gas": 7,
         }
 
     def __init__(
@@ -528,6 +544,39 @@ class GLC(BVP1D):
         _, dim = self._physics(u)
         y_T2_in = max(u[2], 1e-20)
         return _boundary_conditions(Sa, Sb, dim, y_T2_in, self.BCs)
+
+    def update(self, t):
+        """Solve the BVP and expose the dimensional results at the output ports.
+
+        Delegates the solve to :class:`~pathsim.blocks.BVP1D` (warm-started, and
+        skipped when the input is unchanged), then post-processes the
+        dimensionless endpoint solution into the eight dimensional output ports.
+
+        Parameters
+        ----------
+        t : float
+            evaluation time
+
+        Raises
+        ------
+        RuntimeError
+            if the BVP solve did not converge
+        """
+        super().update(t)
+        if not self.success:
+            raise RuntimeError("BVP solver failed to converge.")
+
+        res = self.results()
+        self.outputs.update_from_array(np.array([
+            res["c_T_outlet [mol/m^3]"],
+            res["y_T2_outlet_gas"],
+            res["extraction_efficiency [fraction]"],
+            res["total_gas_P_outlet [Pa]"],
+            res["liquid_vol_flow [m^3/s]"],
+            res["gas_vol_flow_outlet [m^3/s]"],
+            res["tritium_out_liquid [mol/s]"],
+            res["tritium_out_gas [mol/s]"],
+        ]))
 
     def results(self):
         """Post-process the current BVP solution into dimensional results.
