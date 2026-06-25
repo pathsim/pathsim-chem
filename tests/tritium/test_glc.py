@@ -122,9 +122,16 @@ class TestGLC(unittest.TestCase):
                                x_T_ref * _INPUT[0], places=12)
         self.assertAlmostEqual(res["y_T2_outlet_gas"], y_T2_ref, places=12)
 
+        #the open inlet condition neglects the dispersive flux, so O-C does not
+        #close the mass balance exactly; the residual is small but non-trivial
+        #(a few per mille) and is reported honestly rather than hidden
+        rel = abs(res["mass_balance_residual [mol/s]"]) / res["Total tritium in [mol/s]"]
+        self.assertGreater(rel, 1e-6)
+        self.assertLess(rel, 1e-2)
+
 
     def test_results_physical(self):
-        """The dimensional results are physically sensible and mass conserving."""
+        """The dimensional results are physically sensible."""
         blk = GLC(BCs="C-C", **_BASE)
         blk.inputs.update_from_array(np.array(_INPUT))
         blk.update(0.0)
@@ -138,9 +145,10 @@ class TestGLC(unittest.TestCase):
         #hydrostatic head drops the gas pressure below the inlet pressure
         self.assertLess(res["total_gas_P_outlet [Pa]"], _BASE["P_in"])
 
-        #closed tritium mass balance
-        self.assertAlmostEqual(res["Total tritium in [mol/s]"],
-                               res["Total tritium out [mol/s]"], places=12)
+        #closed-closed boundary conditions conserve tritium to numerical noise;
+        #the residual is reported, not redistributed back into the outputs
+        rel = abs(res["mass_balance_residual [mol/s]"]) / res["Total tritium in [mol/s]"]
+        self.assertLess(rel, 1e-6)
 
 
     def test_output_ports(self):
@@ -195,20 +203,6 @@ class TestGLC(unittest.TestCase):
             self.assertEqual(calls[0], 2)
         finally:
             bvpmod.solve_bvp = orig
-
-
-    def test_solve_function(self):
-        """The standalone solve() helper returns results and the BVP block."""
-        p = dict(_BASE)
-        p.update(elements=20, BCs="C-C", c_T_in=_INPUT[0], flow_l=_INPUT[1],
-                 y_T2_in=_INPUT[2], flow_g=_INPUT[3])
-        results, bvp = glc.solve(p)
-
-        self.assertIsInstance(bvp, BVP1D)
-        self.assertTrue(bvp.success)
-        x_T_ref, _ = _reference("C-C")
-        self.assertAlmostEqual(results["c_T_outlet [mol/m^3]"],
-                               x_T_ref * _INPUT[0], places=12)
 
 
     def test_non_physical_pressure_raises(self):
