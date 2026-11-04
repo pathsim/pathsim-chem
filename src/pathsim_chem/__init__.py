@@ -17,3 +17,8 @@ from .tritium import *
 from .thermodynamics import *
 from .process import *
 from .neutronics import *
+
+
+def __getattr__(name):
+    """Deprecated aliases for the blocks that moved, see 'tritium'"""
+    return getattr(tritium, name)
