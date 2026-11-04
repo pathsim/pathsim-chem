@@ -16,32 +16,6 @@ from pathsim.blocks.function import Function
 
 # BLOCKS ================================================================================
 
-class Polynomial(Function):
-    r"""Polynomial correlation (IK-CAPE code: POLY).
-
-    .. math::
-
-        f(T) = \sum_{i=0}^{n} a_i \, T^i
-
-    General-purpose polynomial for temperature-dependent properties.
-
-    Parameters
-    ----------
-    coeffs : list or tuple of float
-        Polynomial coefficients :math:`[a_0, a_1, \ldots, a_n]` (up to 10).
-    """
-
-    input_port_labels = {"T": 0}
-    output_port_labels = {"value": 0}
-
-    def __init__(self, coeffs):
-        self.coeffs = tuple(coeffs)
-        super().__init__(func=self._eval)
-
-    def _eval(self, T):
-        return sum(a * T**i for i, a in enumerate(self.coeffs))
-
-
 class ExponentialPolynomial(Function):
     r"""Exponential polynomial correlation (IK-CAPE code: EPOL).
 
