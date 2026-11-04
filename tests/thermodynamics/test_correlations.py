@@ -13,7 +13,6 @@ import unittest
 import numpy as np
 
 from pathsim_chem.thermodynamics import (
-    Polynomial,
     ExponentialPolynomial,
     Watson,
     Antoine,
@@ -43,25 +42,12 @@ def eval_block(block, T):
 
 # TESTS ================================================================================
 
-class TestPolynomial(unittest.TestCase):
+class TestPolynomialRemoved(unittest.TestCase):
 
-    def test_init(self):
-        P = Polynomial(coeffs=[1.0, 2.0, 3.0])
-        self.assertEqual(P.coeffs, (1.0, 2.0, 3.0))
-
-    def test_constant(self):
-        P = Polynomial(coeffs=[42.0])
-        self.assertAlmostEqual(eval_block(P, 300), 42.0)
-
-    def test_linear(self):
-        P = Polynomial(coeffs=[10.0, 0.5])
-        # f(300) = 10 + 0.5*300 = 160
-        self.assertAlmostEqual(eval_block(P, 300), 160.0)
-
-    def test_quadratic(self):
-        P = Polynomial(coeffs=[1.0, 0.0, 0.01])
-        # f(10) = 1 + 0 + 0.01*100 = 2
-        self.assertAlmostEqual(eval_block(P, 10), 2.0)
+    def test_import_names_replacement(self):
+        #removed in favour of pathsim.blocks.Polynomial, the coefficient order differs
+        with self.assertRaisesRegex(ImportError, "pathsim.blocks.Polynomial"):
+            from pathsim_chem import Polynomial
 
 
 class TestExponentialPolynomial(unittest.TestCase):
@@ -339,7 +325,6 @@ class TestSmokeAllBlocks(unittest.TestCase):
 
     def test_all_blocks_at_300K(self):
         blocks = [
-            Polynomial(coeffs=[1.0, 0.01]),
             ExponentialPolynomial(coeffs=[2.0, 0.001]),
             Watson(a0=5e7, a1=0.38, a2=647.0),
             Antoine(a0=23.2256, a1=3835.18, a2=-45.343),
