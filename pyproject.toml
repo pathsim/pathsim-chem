@@ -26,8 +26,8 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    # GLC block uses pathsim.blocks.BVP1D, introduced in pathsim 0.23
-    "pathsim>=0.23",
+    # Splitter alias points to pathsim.blocks.Splitter, introduced in pathsim 0.29
+    "pathsim>=0.29",
     "numpy>=1.15",
     "scipy>=1.2",
     # If a dependency ships native code that can't be installed in Pyodide,

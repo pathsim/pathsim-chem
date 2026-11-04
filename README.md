@@ -33,7 +33,7 @@ PathSim-Chem extends the [PathSim](https://github.com/pathsim/pathsim) simulatio
 - **Excess Enthalpy & Departure** — NRTL, UNIQUAC, Wilson, Redlich-Kister excess enthalpy and EoS departure functions
 - **Chemical Reactions** — Equilibrium constants, kinetic rate constants, and power-law rate expressions
 - **Process Unit Operations** — CSTR, counter-current heat exchanger, flash drum, and distillation tray blocks with full ODE dynamics
-- **Tritium Processing** — GLC columns, TCAP cascades, bubblers, and splitters for tritium separation
+- **Residence Time Models** — first order residence time blocks for process and fuel cycle models. The tritium blocks (GLC, bubbler, ionisation chamber) have moved to [pathsim-fusion](https://github.com/pathsim/pathsim-fusion), the splitter to pathsim core
 
 ## Install
 
